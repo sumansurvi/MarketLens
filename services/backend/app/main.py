@@ -74,7 +74,12 @@ def create_app(settings: Settings, *, gateway: ToolGateway | None = None, llm: L
         allow_methods=["GET", "POST", "DELETE"],
         allow_headers=["Content-Type", "X-MarketLens-Client"],
     )
-    app.add_middleware(RequestContextMiddleware, max_body_bytes=settings.max_request_body_bytes)
+    app.add_middleware(
+        RequestContextMiddleware,
+        max_body_bytes=settings.max_request_body_bytes,
+        secure_cookie=settings.session_cookie_secure,
+        proxy_secret=settings.proxy_secret,
+    )
     install_error_handlers(app)
     app.include_router(health.router)
     app.include_router(research.router)

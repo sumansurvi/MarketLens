@@ -149,3 +149,15 @@ vite.config.ts.timestamp-*
 .turbo
 
 .DS_Store*
+
+# MarketLens: Python build artefacts and local runtime data (never deployed from git)
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+data/*.db
+data/*.db-*
+data/runtime/
+# Vercel CLI link folder
+.vercel

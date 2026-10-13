@@ -64,6 +64,10 @@ class Settings(BaseSettings):
     backend_port: int = Field(default=8000, ge=1, le=65535)
     frontend_origin: str = "http://localhost:3000"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    # Hosted deployments (D-94): when set, every /api request except the health check and the
+    # voice worker's internal API must carry it in X-MarketLens-Proxy-Secret. The web app's proxy
+    # adds it server-side, so only the deployed web app can reach the backend.
+    proxy_shared_secret: SecretStr | None = None
 
     # LLM
     openai_api_key: SecretStr | None = None
@@ -197,8 +201,23 @@ class Settings(BaseSettings):
             "transcript_persistence": self.transcript_persistence,
         }
 
+    @property
+    def proxy_secret(self) -> str | None:
+        value = self.proxy_shared_secret.get_secret_value().strip() if self.proxy_shared_secret else ""
+        return value or None
+
+    @property
+    def session_cookie_secure(self) -> bool:
+        """Production is served over https (Vercel), so the session cookie gets ``Secure``."""
+        return self.app_env == "production"
+
     def public_exposure_warnings(self) -> list[str]:
         warnings: list[str] = []
+        if self.app_env == "production" and not self.proxy_secret:
+            warnings.append(
+                "APP_ENV=production without PROXY_SHARED_SECRET: anyone who finds this backend's URL can "
+                "run research on your API keys. Set the same PROXY_SHARED_SECRET here and on the web app."
+            )
         try:
             host_is_loopback = ipaddress.ip_address(self.backend_host).is_loopback
         except ValueError:
@@ -272,6 +291,10 @@ def validate_settings(settings: Settings) -> list[str]:
                 "LLM_MODE=openai requires OPENAI_MODEL (choose a currently supported model that supports "
                 "structured outputs). Model IDs are not hardcoded."
             )
+    if settings.proxy_secret is not None and len(settings.proxy_secret) < 32:
+        problems.append(
+            "PROXY_SHARED_SECRET must be at least 32 characters (for example the output of `openssl rand -hex 32`)."
+        )
     if settings.voice_mode == "livekit" and not settings.livekit_configured:
         problems.append(
             "VOICE_MODE=livekit requires LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET. "

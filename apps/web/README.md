@@ -5,6 +5,10 @@ Next.js 16 (App Router, TypeScript, Tailwind 4) client for MarketLens. See the r
 backend at `BACKEND_URL` (default `http://127.0.0.1:8000`). The app never holds API keys.
 
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm typecheck`
+- Deploys to Vercel with Root Directory `apps/web` (`vercel.json`). `proxy.ts` (Next 16's renamed
+  middleware) can ask for a site password (`SITE_PASSWORD`), and adds the backend shared secret
+  (`PROXY_SHARED_SECRET`) to `/api` requests server-side. Both are unset locally. See
+  `docs/DEPLOY_VERCEL.md` (D-94).
 - `pnpm gen:api` regenerates `lib/api/schema.d.ts` from `openapi.json`
   (export it with `uv run python scripts/export_openapi.py` at the repo root).
 

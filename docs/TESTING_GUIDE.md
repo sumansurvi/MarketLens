@@ -269,7 +269,25 @@ The thorough versions of the security checks run automatically in `make test`: e
 ## 7. Docker and deployment (optional)
 
 - **Docker:** Docker Desktop must be running. Stop the local app first (`make stop`, since Docker uses the same ports), then run `make start MODE=docker`. The first start builds the image and installs dependencies, which takes several minutes; follow it with `make logs MODE=docker` and stop with `make stop MODE=docker`. This path has **not yet been run on this machine**, so report anything odd. Inside Docker, `127.0.0.1` is the container itself, so to use Ollama on your Mac set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1`. That address is no longer local, so `OPENAI_API_KEY` must then have a value; any placeholder works with Ollama.
-- **Vercel build guard:** `VERCEL=1 pnpm --dir apps/web build` (without `BACKEND_URL`) should stop with "BACKEND_URL must be set to the public https URL of the MarketLens backend…". The real deployment steps are in [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md). Afterwards, run `pnpm --dir apps/web build` again so the local production build points at your local backend.
+- **Vercel build guard:** `VERCEL=1 pnpm --dir apps/web build` (without `BACKEND_URL`) should stop with "BACKEND_URL must be set to the public https URL of the MarketLens backend…". With `VERCEL=1 BACKEND_URL=https://example.com` the build should succeed and list `ƒ Proxy (Middleware)`. The real deployment steps are in [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md). Afterwards, run `pnpm --dir apps/web build` again so the local production build points at your local backend.
+- **Hosted protections (D-94), automated:** `uv run pytest tests/integration/test_hosted_deployment.py` covers four things:
+  - the `Secure` cookie in production;
+  - the 403 without `PROXY_SHARED_SECRET`, with `/api/health` and the voice worker's API exempt;
+  - the 32-character minimum;
+  - the startup warning.
+- **Hosted protections, by hand:**
+  1. Build the web app against a local backend: `pnpm --dir apps/web build`.
+  2. Start the backend with `PROXY_SHARED_SECRET=<32+ characters>` and `APP_ENV=production`.
+  3. Start the web app with the same secret and a `SITE_PASSWORD`: `SITE_PASSWORD=pw PROXY_SHARED_SECRET=… pnpm --dir apps/web start`.
+
+  Then check:
+  - `http://localhost:3000` asks for the password;
+  - research works after you sign in;
+  - `curl localhost:8000/api/data-status` answers 403, and `curl localhost:8000/api/health` answers 200.
+- **After deploying:**
+  - `https://<backend>/api/health` answers 200 and other `/api` addresses 403;
+  - the Vercel address asks for the password and then runs a research;
+  - the cookie `ml_session` shows `Secure` in the browser's developer tools.
 
 ---
 

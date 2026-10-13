@@ -217,7 +217,7 @@ You can't click these directly, but you can see their effects.
 | Real-setup smoke tests | [`TESTING_GUIDE.md`](TESTING_GUIDE.md) §2 |
 | Demo data | `uv run python scripts/seed_demo.py` (demo mode only) |
 | Docker fallback | `make start MODE=docker` (needs Docker Desktop running; not yet run on this machine) |
-| Deploy to Vercel | [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md): the web app goes on Vercel, the backend on a container host |
+| Deploy to Vercel | [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md): the web app goes on Vercel, the backend on Render (`render.yaml`) or another container host. Optional site password (`SITE_PASSWORD`) and backend shared secret (`PROXY_SHARED_SECRET`) (D-94) |
 | Configuration | `.env` (every setting is explained in `.env.example`), README › Configuration |
 
 ---

@@ -59,6 +59,15 @@ flowchart TD
 ```
 
 - **Web → backend.** The browser talks only to the web app's own origin. A Next.js rewrite proxies `/api/*` to `BACKEND_URL`, so the HTTP-only session cookie stays first-party and no backend address or key is in the browser bundle (D-06).
+- **Hosted deployment (D-94).**
+  - The web app runs on **Vercel** (Root Directory `apps/web`). The backend runs on a **container host**: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`. The optional voice worker runs as a background worker (`Dockerfile.voice`).
+  - The backend can't run on Vercel because it keeps three MCP subprocesses, background research runs and a SQLite file.
+  - `apps/web/proxy.ts` (Next 16's renamed middleware) runs before every page and `/api` request:
+    - It can ask for a site password (`SITE_PASSWORD`, HTTP Basic).
+    - On `/api` requests it removes the browser's `Authorization` header and any client-sent secret, then adds `X-MarketLens-Proxy-Secret` (`PROXY_SHARED_SECRET`) server-side.
+  - With `PROXY_SHARED_SECRET` set, the backend rejects every `/api` request without it (403). Two routes are exempt: `/api/health` (the host's health check) and the voice worker's internal API, which has its own token.
+  - `APP_ENV=production` marks the session cookie `Secure`.
+  - Locally none of these are set, and nothing changes.
 - **Backend → tools.** All data access and every workspace read and write go through the MCP client gateway. The gateway talks to three separate MCP server processes over stdio. There is no in-process shortcut: the temporary Phase 1 in-process gateway was deleted in Phase 2 (D-29).
 - **Voice is an interaction adapter, not a second research system.**
   - When voice is configured, the browser asks the backend for a voice session. It receives a short-lived, room-scoped LiveKit token and never the API secret. The token dispatches the voice worker into that room.
@@ -89,8 +98,11 @@ reports/evaluation/               latest evaluation report (JSON and Markdown)
 docs/                             five-minute demo script, screenshots, Vercel deployment guide
 Makefile                          start / stop / status / run / test / evaluate (local toolchain, or Docker as a fallback)
 Dockerfile, docker-compose.yml    optional Docker toolchain for running the app without local Node, pnpm or uv
-Dockerfile.backend                production-style backend image (FastAPI plus the three MCP servers it spawns)
+Dockerfile.backend                production backend image (FastAPI plus the three MCP servers it spawns; SQLite on /data)
+Dockerfile.voice                  optional voice worker image (LiveKit agent, no inbound port)
+render.yaml                       Render Blueprint: the backend from Dockerfile.backend with a disk, demo mode, a generated proxy secret (D-94)
 apps/web/vercel.json              Vercel settings for the web app (the backend runs on a container host)
+apps/web/proxy.ts                 optional site password, and the backend shared secret added to /api requests (D-94)
 ```
 
 Python is one uv workspace: a root `pyproject.toml` and one lockfile covering every `services/*` package except the voice worker (D-04). The worker is excluded because `livekit-agents` requires `openai<3` while the backend uses `openai` 3.x (D-53). The web app is a pnpm workspace member (`apps/*`).
@@ -112,6 +124,7 @@ Python is one uv workspace: a root `pyproject.toml` and one lockfile covering ev
 | Separate pages: research home, run page, saved briefs, watchlist, settings | One chat-style screen: history rail on the left, the run in the middle, quick starts on the right, and a one-line research bar (ticker dropdown, dictation, voice session) docked at the bottom. Run details and comparisons open as dialogs. Saved briefs, the watchlist and data status have no UI (API only); `/research/[runId]` still opens a run | D-78, D-81, D-82, D-83 |
 | OpenAI as the only real model | Any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, so a free local model (Ollama) works without a key | D-76 |
 | Alpha Vantage requests limited per process (D-40) | Pacing shared by every process through SQLite, one upstream call for identical concurrent requests, one retry after a per-second rejection, and the daily quota reported as such | D-77 |
+| Deployment notes only; the app runs locally | Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94 |
 
 ## 3. Components and responsibilities
 
@@ -187,7 +200,7 @@ services/backend/app/
     compare.py            period comparison
     voice.py              voice sessions and the worker's internal API (hidden from OpenAPI)
     analytics.py          local analytics events and summary
-    middleware.py         request IDs, server-owned session cookie, body-size limit, response headers
+    middleware.py         request IDs, server-owned session cookie (Secure in production), proxy shared secret, body-size limit, response headers
     errors.py             one error envelope: stable code, safe message, request ID, no stack traces
     schemas.py, deps.py   HTTP response contracts (the source of the web types); FastAPI dependencies
   services/
@@ -248,12 +261,13 @@ services/backend/app/
 
 **Rules that apply to every route:**
 - State-changing requests need the `X-MarketLens-Client` header, a CSRF defense (D-37).
-- The server owns an HTTP-only `SameSite=Lax` session cookie.
+- The server owns an HTTP-only `SameSite=Lax` session cookie, which is also `Secure` with `APP_ENV=production` (D-94).
+- With `PROXY_SHARED_SECRET` set, every `/api` request except `/api/health` and the voice worker's internal API must carry `X-MarketLens-Proxy-Secret`, or it gets a 403. The web app's proxy adds the header (D-94).
 - Request bodies are capped at `MAX_REQUEST_BODY_BYTES` (default 64 KiB) with a 413, streamed bodies included (D-71).
 - CORS allows only `FRONTEND_ORIGIN`.
 - Every error uses the same envelope.
 
-MarketLens is a **local, single-user MVP**: one browser session cookie and no user accounts. Runs, briefs and the watchlist are shared by anyone who can reach the backend, and startup warns when the backend binds to a non-loopback address. Every write still needs server-side validation and a confirmation grant. It is not hardened for public multi-tenant deployment (README › Deployment notes).
+MarketLens is a **single-user MVP**: one browser session cookie and no user accounts. Runs, briefs and the watchlist are shared by anyone who can reach the backend. Locally, startup warns when the backend binds to a non-loopback address. Hosted (D-94), it warns when `APP_ENV=production` has no `PROXY_SHARED_SECRET`, and the site password is one shared login. Every write still needs server-side validation and a confirmation grant. It is not hardened for public multi-tenant deployment (README › Deployment notes).
 
 ### 3.3 Research workflow and agents
 
@@ -426,7 +440,11 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - They use the local toolchain when uv, pnpm and Node are installed, and Docker (`docker-compose.yml`) otherwise.
   - `make start` seeds the demo data unless `.env` selects live data or a real model.
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
-- **Deployment:** `apps/web` deploys to Vercel; the backend and its MCP servers need a long-running container host (`Dockerfile.backend`). The steps are in `docs/DEPLOY_VERCEL.md`.
+- **Deployment (D-94):**
+  - `apps/web` deploys to Vercel (`vercel.json`; the build stops without an https `BACKEND_URL`).
+  - The backend and its MCP servers need a long-running container host: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`.
+  - The voice worker uses `Dockerfile.voice`.
+  - The steps are in `docs/DEPLOY_VERCEL.md`.
 - **`scripts/seed_demo.py`** (D-74): fixture-only, idempotent demo data, created through the public API and the confirmation flow.
 - **`scripts/generate_fixtures.py [--check]`** regenerates the fixture dataset byte for byte.
 - **`scripts/export_openapi.py [--check]`** refreshes the web app's API schema.

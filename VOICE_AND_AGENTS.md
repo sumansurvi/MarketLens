@@ -199,6 +199,7 @@ Requirements:
 - Prefer `MCPToolset` with stable server/toolset IDs if the voice agent needs direct MCP tools. The recommended architecture may instead expose a narrow `run_company_research` function tool which calls `ResearchWorkflowService`; this is acceptable because the shared service itself uses a real MCP client to call the independent MCP servers. Do not expose both duplicated paths without reason.
 - Ensure the configured voice model/tool interface supports the needed tool calls. If using separate STT/LLM/TTS, keep each provider adapter configurable and document every required key. If using a realtime model, verify tool-call/event behavior against current docs.
 - If LiveKit is not configured, the API health route reports `voice_enabled: false` and the frontend displays setup instructions. Do not fake a voice animation while routing audio nowhere.
+- Hosted (D-94): the worker runs from `Dockerfile.voice` as a background worker (`marketlens-voice-agent start`) and reaches the backend at `VOICE_BACKEND_URL`. The internal voice API is exempt from the backend's `PROXY_SHARED_SECRET` because it has its own token, derived from the LiveKit secret. See `docs/DEPLOY_VERCEL.md` §5.
 
 ## 9. Prompt injection and untrusted data
 
