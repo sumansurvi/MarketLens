@@ -15,6 +15,8 @@ export interface WorkspaceApi {
   view: View;
   openRun: (runId: string) => void;
   goHome: () => void;
+  /** Open "Search research" (D-96). */
+  openSearch: () => void;
   /** Fill the research bar (e.g. from a quick start) without starting anything. */
   prefill: (symbol: string, question?: string) => void;
   preset: Preset | null;

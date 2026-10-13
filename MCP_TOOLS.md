@@ -2,6 +2,11 @@
 
 **Purpose:** This document defines the actual MCP boundaries, tool names, inputs, outputs, permissions and failure behavior. Claude Code must implement these contracts or document a justified change before altering them.
 
+> **As built (reviewed 2026-10-13).** The contracts below are implemented, with the changes in the §0 change log.
+> - **Tools:** 19 in all, the gateway's allowlist (`services/backend/app/mcp/gateway.py`): `market_data` 5, `research_sources` 7 (including B6 `resolve_symbol` and B7 `search_symbols`), `research_workspace` 7.
+> - **Confirmed writes:** since D-81 the web app has no save or watchlist screens, so the §6 confirmation panel exists only as the API flow (propose → preview → confirm).
+> - **Not MCP tools:** searching past research (D-96, `GET /api/research/search`) and run history are backend-owned, like the runs, claims and briefs they read.
+
 ## 0. Contract change log
 
 | Date | Change | Rationale |
@@ -20,6 +25,7 @@
 | 2026-10-12 (D-85) | **B2 `get_sec_company_facts`** returns only the newest reporting period: superseded tags go to `missing_concepts`, and overdue periods return no figures. Freshness follows filing deadlines instead of a fixed 135/455 days. The Alpha Vantage fallback (**A3**) drops overdue series the same way. | Briefs showed 2010–2018 values from tags issuers had abandoned, and called a fiscal-Q3 quarter stale before the 10-K could contain the next one. |
 | 2026-10-12 (D-84) | **B7 `search_symbols`** accepts an empty `query` (default) and then lists the largest covered companies. | The ticker dropdown always shows a list, not only after typing. |
 | 2026-10-12 (D-82) | Added read-only tool **B7 `search_symbols`** on `research_sources`. | The research bar's ticker dropdown suggests covered tickers by symbol or company name. Coverage comes from the same ticker/exchange mapping as B6, owned by this server. Suggestions never replace resolution: research still resolves the exact ticker the user picks. |
+| 2026-10-11 (D-79) | **B6 `resolve_symbol`**: class-share tickers resolve with either separator (`BRK.B` or `BRK-B`), and `symbol` in the result is the SEC's spelling. | The SEC list uses one form (`BRK-B`) while users and the input hint write `BRK.B`; nothing else is fuzzy-matched. |
 
 ## 1. MCP design requirements
 
@@ -262,7 +268,7 @@ Input: `{}`. Output: provider configured state, data mode, supported capability 
 **Responsibilities:** SEC filing discovery, SEC company facts and news/event retrieval.  
 **Read/write:** read-only.  
 **Initial authoritative filing source:** SEC EDGAR public APIs.  
-**News source:** Alpha Vantage news endpoint if available under configured plan; otherwise explicit unavailable state or labeled fixtures.
+**News source:** Alpha Vantage news endpoint if available under configured plan; otherwise explicit unavailable state or labeled fixtures. *(As built: in live mode, Yahoo Finance's public headline RSS when Alpha Vantage refuses news as premium, D-86.)*
 
 ### Tool B1: `search_company_filings`
 
@@ -396,6 +402,7 @@ Rules:
 - Normalize (trim, uppercase) and validate syntax first (`INVALID_SYMBOL` on failure).
 - Live mode: resolve through the SEC-maintained ticker/exchange mapping and accept only NYSE/Nasdaq listings. Fixture mode: accept only the fixture universe.
 - A syntactically valid symbol outside coverage returns `UNKNOWN_SYMBOL` with the covered universe or coverage rule in the message. Never substitute a similar ticker.
+- Class shares *(added 2026-10-11, D-79)*: `BRK.B` and `BRK-B` resolve to the SEC's spelling, returned in `symbol`; nothing else is fuzzy-matched.
 
 ### Tool B7: `search_symbols` *(added 2026-10-12, see change log)*
 

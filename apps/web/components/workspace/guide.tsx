@@ -145,10 +145,14 @@ const TOPICS: Topic[] = [
     id: "history",
     icon: "🗂",
     title: "Find past research",
-    intro: "Everything you research is kept on this computer.",
+    intro: "Everything you research is kept in your MarketLens history.",
     steps: [
       <>
         The <b>Research history</b> on the left lists every run with its status; a <Ui>Voice</Ui> tag marks research Lens started.
+      </>,
+      <>
+        Press the search icon <Ui>⌕</Ui> beside <Ui>New research</Ui> (or <Key>⌘</Key> <Key>K</Key> / <Key>Ctrl</Key> <Key>K</Key>) and type a ticker, a
+        company name, or any word from a question or a finding. Suggestions appear as you type, with the matching words highlighted.
       </>,
       <>The address bar always points at the open research, so refreshing or bookmarking brings it back.</>,
     ],
@@ -173,9 +177,10 @@ const TOPICS: Topic[] = [
     intro: "Small things that make it quicker.",
     steps: [
       <>
-        <Key>Enter</Key> starts research, <Key>↑</Key> <Key>↓</Key> move through the ticker list, <Key>Esc</Key> closes lists and dialogs.
+        <Key>Enter</Key> starts research, <Key>↑</Key> <Key>↓</Key> move through the ticker list, <Key>Esc</Key> closes lists and dialogs, and{" "}
+        <Key>⌘</Key> <Key>K</Key> (<Key>Ctrl</Key> <Key>K</Key>) searches your research.
       </>,
-      <>In a smaller window, the history and this guide move to buttons at the top right; widen the window to see the suggestions panel.</>,
+      <>In a smaller window, search, the history and this guide move to buttons at the top right; widen the window to see the suggestions panel.</>,
       <>MarketLens follows your device&apos;s light or dark mode.</>,
     ],
   },

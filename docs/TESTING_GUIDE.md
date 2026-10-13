@@ -4,7 +4,7 @@ A step-by-step guide to testing everything: the automated suites, smoke tests ag
 
 If you're new to the project, start with [`FEATURES.md`](FEATURES.md): it explains what MarketLens does and lists every feature with where to find it. This guide assumes the setup this project runs with today: live data (a free Alpha Vantage key plus SEC EDGAR), a free local model through Ollama, and voice through a LiveKit Cloud project, started with `make start`.
 
-**Cost.** Everything here is free except voice (§6), which runs speech and the voice model on LiveKit Cloud under your LiveKit account. The only other limit is the free Alpha Vantage key: **25 requests a day**, at most about one per second. A live research run uses about **3** (quote, daily prices, news), and anything fetched in the last 15 minutes is reused from the cache. SEC EDGAR and Ollama have no daily limit. Each step below is marked with its Alpha Vantage cost.
+**Cost.** Everything here is free except voice (§6), which runs speech and the voice model on LiveKit Cloud under your LiveKit account. The only other limit is the free Alpha Vantage key: **25 requests a day**, at most about one per second. A live research run uses up to **3** (quote, daily prices, news; on a free key news stops going to Alpha Vantage after its first refusal, so later runs use 2), and anything fetched in the last 15 minutes is reused from the cache. SEC EDGAR and Ollama have no daily limit. Each step below is marked with its Alpha Vantage cost.
 
 **Time.** About 20 minutes for the essentials (§0, §1, §3, §4.1), 1–2 hours for everything.
 
@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `353 passed, 2 skipped`. The 2 skipped tests are the credential-gated smoke tests in §2 |
+| `make test` | `361 passed, 2 skipped`. The 2 skipped tests are the credential-gated smoke tests in §2 |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -124,11 +124,18 @@ Everything in this section uses data you already have (your live AAPL and NVDA r
 2. Refresh the page: the same run reopens.
 3. Scroll a brief: the research bar at the bottom and the summary bar (ticker, price, buttons) stay put; only the brief moves.
 4. Old links like `/research/<run id>` open that run in the same screen. `/watchlist`, `/settings` and `/briefs` were removed (D-81) and show the not-found page.
-5. For each dialog (**Details** and **Compare periods** on a run, and **History** in a narrower window): Esc closes it, Tab stays inside it, and focus returns to the button that opened it.
+5. For each dialog (**Details** and **Compare periods** on a run, **Search research**, and **History** in a narrower window): Esc closes it, Tab stays inside it, and focus returns to the button that opened it.
+6. **Search research (D-96):**
+   1. Press the search icon beside **New research**, or ⌘K (Ctrl+K). The cursor is in the search box. **Tickers you've researched** and **Recent research** are listed.
+   2. Type `apple`: your AAPL runs appear as you type, with "Apple" highlighted in the company name.
+   3. Type `revenue`: runs whose findings mention revenue appear, each with the matching sentence (❝ …) and the word highlighted.
+   4. Type `apple zzzz`: nothing matches (every word must match), and a hint with **Start a new research** appears.
+   5. Press ↓ and Enter on a result: it opens and the dialog closes.
+   6. Click a ticker chip: the box fills with that ticker.
 
 ### 3.2 Reading a brief
 Open your live **AAPL** run (Oct 11) and check, top to bottom:
-- [ ] **Heads up** card: each problem in plain words with "What you can do". On that run: news not included in the plan, and AI steps that fell back. (Runs from now on get news from the Yahoo Finance fallback.) The card shows no technical codes. Hover a card to see the technical code.
+- [ ] **Heads up** card: each problem in plain words with "What you can do". On that run: news not included in the plan, and AI steps that fell back. (Runs from now on get news from the Yahoo Finance fallback.) The card shows no technical codes.
 - [ ] **Freshness chips:** what date each kind of data describes (Prices, Financials, Filings, News) and when it was fetched.
 - [ ] **Fact-check meter:** how many statements were verified, read with care or set aside, and how many numbers matched their source.
 - [ ] **Key numbers** with ▲/▼, **Price movement** chart (hover for daily closes), **Financial results**, **SEC filings**.
@@ -145,7 +152,7 @@ Open your live **AAPL** run (Oct 11) and check, top to bottom:
 ### 3.3 Evidence inspector
 Click any source chip (each has its own name, for example **Price change**, **Largest daily drop** or **Revenue (quarter) · Jun 27, 2026**). The panel describes the values in words ("First close $298.97 on May 19, 2026") with a plain formula for calculations; no internal IDs, field names or hashes appear.
 - On a wide window the panel docks on the right and the brief stays readable; on a narrow one it slides over.
-- It shows the source, link, period, when it was fetched and the exact values. **Cited by** lists the statements that use it.
+- It shows the source, link, period, when it was fetched and the exact values. "N statements use this source" lists the statements that use it.
 - Esc or × closes it.
 
 ### 3.4 Check that the numbers are real
@@ -180,7 +187,7 @@ Press **Details** on a run. Expect the question, window, timing, data and model;
 Saved briefs and the watchlist are no longer in the app (D-81), so there is nothing to save or confirm in the browser. The API still refuses writes without a confirmation; see "Write without confirmation" in §5.
 
 ### 3.8 Window size and dark mode
-- Make the browser window narrower. Below about 1280 px the right-hand panel goes (the quick-start cards move to the welcome screen and **✦ Explore** appears in the header); below about 1024 px the history opens from **History**. The research bar stays at the bottom and nothing scrolls sideways.
+- Make the browser window narrower. Below about 1280 px the right-hand panel goes (the quick-start cards move to the welcome screen and **✦ Explore** appears in the header); below about 1024 px the history opens from **History** and search from the 🔍 button beside it. The research bar stays at the bottom and nothing scrolls sideways.
 - Switch macOS to Dark appearance (System Settings › Appearance): the app follows.
 
 ### 3.9 Prompt injection (demo scenario)
@@ -195,11 +202,11 @@ Open the **DEMO** AAPL run from Oct 10 in the history. Under **What this brief c
 ### 4.1 A full live run
 1. In the research bar, type ticker `MSFT`, question `What happened to Microsoft's shares over the last three months, and what are the main risks?`, window **3 months**, then press **↑** (or Enter).
 2. Right away: the run opens in place, the address bar shows `/?run=…`, and the history shows MSFT as **Running**. A progress card shows four phases (gathering data, specialist analysis, writing the brief, fact-checking) and a timer; **Show every step** lists the details.
-3. When it finishes: the status is **Complete** or **Partial**, with the green **LIVE DATA** badge. If anything limited the report, the **Heads up** card says what and why. On a free key, expect news to be "Not included in the current data plan".
+3. When it finishes: the status is **Complete** or **Partial**, with the green **LIVE DATA** badge. If anything limited the report, the **Heads up** card says what and why. On a free key, news comes from Yahoo Finance headlines (the news chips read "… story").
 4. Repeat §3.2–§3.4 on this run, and compare the price with a quote site.
 
 ### 4.2 Re-run
-**Alpha Vantage cost: about 2** within 15 minutes: the price history is reused from the cache, the quote is refreshed, and the news request is repeated, because refusals are never cached.
+**Alpha Vantage cost: about 1** within 15 minutes: the price history is reused from the cache and only the quote is refreshed. News doesn't go to Alpha Vantage again after its first refusal (§4.3).
 
 Press **Re-run**. A new run starts with "A re-run of an earlier run", and the original is unchanged.
 
@@ -261,7 +268,7 @@ The thorough versions of the security checks run automatically in `make test`: e
   1. `make status` shows `Voice up`. If it says `Voice down`, run `make logs` and look for `[voice]` lines; `registered worker` means the worker reached LiveKit.
   2. Press the **sound-wave** button in the research bar (not the dictation microphone next to it) and allow the microphone. A large voice screen titled **Lens · MarketLens voice assistant** opens; Lens greets you and the bars move while it speaks. New lines keep the conversation scrolled to the bottom. If a **Turn on the assistant's voice** button appears, press it.
   3. Ask "Research Apple, ticker A A P L, over the last three months." Expect a spoken confirmation and the research progress card inside the voice screen (with the run opening behind it). If Lens says it is checking but no progress card appears within 15 seconds, a notice says the research hasn't started (see README › Troubleshooting). When it finishes, the voice screen shrinks to a bar, the brief is visible, and a short spoken summary says whether the report is complete or partial. **Expand** reopens the voice screen.
-  4. The research appears in the history at once with a **Voice** tag. End the session with **✕** (on the voice screen or the bar), or the square stop button that replaced the sound-wave button. If you hear nothing, press **Allow audio playback**. Errors in the panel, such as "The voice assistant did not join" or a speech-service error, are explained in README › Troubleshooting.
+  4. The research appears in the history at once with a **Voice** tag. End the session with **✕** (on the voice screen or the bar), or the square stop button that replaced the sound-wave button. If you hear nothing, press **Turn on the assistant's voice**. Errors in the panel, such as "The voice assistant did not join" or a speech-service error, are explained in README › Troubleshooting.
 - **Without voice settings:** with `VOICE_MODE=disabled`, the sound-wave button is dimmed; pressing it shows **Voice not configured** above the bar (dictation still works), and text research is unaffected. That is the expected result.
 
 ---

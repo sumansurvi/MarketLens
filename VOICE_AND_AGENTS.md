@@ -1,6 +1,6 @@
 # MarketLens — Agent Design and Voice UX
 
-> **As built (reviewed 2026-10-12).** This design is kept as written; the implementation follows it, with these additions: the voice assistant is named **Lens** and its instructions require starting research in the same turn as the ticker confirmation (D-89); the §7 states are shown on a large voice screen with the research progress inside it, which shrinks to a bar when the brief is ready, and ✕ ends the session (D-88 to D-90); dictation (speech to text, no voice reply) is a separate microphone in the research bar (D-83). See [`architecture.md`](architecture.md) §3.7.
+> **As built (reviewed 2026-10-13).** This design is kept as written; the implementation follows it, with these additions and differences: Lens has exactly three tools, `run_company_research`, `get_research_run_status` and `get_brief_summary` (no `search_saved_briefs`, D-57), and since D-81 it says MarketLens doesn't save briefs or track companies, so there is no pending-action screen for voice; the voice assistant is named **Lens** and its instructions require starting research in the same turn as the ticker confirmation (D-89); the §7 states are shown on a large voice screen with the research progress inside it, which shrinks to a bar when the brief is ready, and ✕ ends the session (D-88 to D-90); dictation (speech to text, no voice reply) is a separate microphone in the research bar (D-83). Hosted, the worker runs from `Dockerfile.voice` (D-94, §8). See [`architecture.md`](architecture.md) §3.7.
 
 ## 1. Design goals
 

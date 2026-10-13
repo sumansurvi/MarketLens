@@ -113,6 +113,19 @@ class RunListResponse(ApiModel):
     runs: list[ResearchRun]
 
 
+class RunSearchResult(ApiModel):
+    run: ResearchRun
+    # Where the best match is: the ticker, the company name, the question or a kept finding.
+    matched: Literal["ticker", "company", "question", "finding"]
+    # Part of a finding containing search words the ticker, company and question don't contain.
+    snippet: str | None = None
+
+
+class RunSearchResponse(ApiModel):
+    query: str
+    results: list[RunSearchResult]
+
+
 class BriefListResponse(ApiModel):
     briefs: list[SavedBriefSummary]
 

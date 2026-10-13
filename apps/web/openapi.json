@@ -2929,6 +2929,62 @@
         "title": "RunListResponse",
         "type": "object"
       },
+      "RunSearchResponse": {
+        "properties": {
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/RunSearchResult"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "query",
+          "results"
+        ],
+        "title": "RunSearchResponse",
+        "type": "object"
+      },
+      "RunSearchResult": {
+        "properties": {
+          "matched": {
+            "enum": [
+              "ticker",
+              "company",
+              "question",
+              "finding"
+            ],
+            "title": "Matched",
+            "type": "string"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ResearchRun"
+          },
+          "snippet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snippet"
+          }
+        },
+        "required": [
+          "run",
+          "matched",
+          "snippet"
+        ],
+        "title": "RunSearchResult",
+        "type": "object"
+      },
       "RunStage": {
         "enum": [
           "created",
@@ -4745,6 +4801,63 @@
           }
         },
         "summary": "Create Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/search": {
+      "get": {
+        "description": "Find past research by ticker, company name, question or the text of its kept findings.",
+        "operationId": "search_research_api_research_search_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 100,
+              "minLength": 1,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search Research",
         "tags": [
           "research"
         ]

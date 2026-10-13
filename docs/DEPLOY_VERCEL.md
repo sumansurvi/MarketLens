@@ -32,7 +32,7 @@ Browser ──https──▶ Vercel (apps/web)          ──https──▶ Ren
    - the service URL (top of the service page);
    - `PROXY_SHARED_SECRET` (**Environment** tab › reveal).
 
-**Plans:** a disk needs a paid instance (`plan: starter`). To try it for free, delete the `disk` block in `render.yaml` and set `plan: free`. Then the research history resets on every deploy, and the service sleeps when idle (the first visit after that takes about a minute).
+**Plans:** Render names its plans by CPU and memory. `render.yaml` uses `0.5c-512mb`, the smallest paid size. The backend and its three MCP servers use about 290 MB when idle; pick `1c-2g` in the dashboard if you want more headroom for live data. A disk needs a paid instance. To try it for free, delete the `disk` block in `render.yaml` and set `plan: free`. Then the research history resets on every deploy, and the service sleeps when idle (the first visit after that takes about a minute).
 
 **Other hosts:** `Dockerfile.backend` runs anywhere. You need to:
 - mount a persistent volume at `/data`;
@@ -46,7 +46,7 @@ To try the image locally, run `docker build -f Dockerfile.backend -t marketlens-
 ## 2. Web app on Vercel
 
 1. In Vercel choose **Add New › Project** and import the same repository.
-2. Set **Root Directory** to `apps/web`. Leave "Include source files outside of the Root Directory" on (the default). The framework (Next.js) and the pnpm commands come from [`apps/web/vercel.json`](../apps/web/vercel.json); don't override them.
+2. Set **Root Directory** to `apps/web`. Leave "Include source files outside of the Root Directory" on (the default). The framework (Next.js) and the install and build commands come from [`apps/web/vercel.json`](../apps/web/vercel.json); don't override them. They run the exact pnpm version the project uses (12.10.1, through `npx`), because Vercel's built-in pnpm stops at version 10.
 3. Add these **Environment Variables**:
 
    | Variable | Value | |
@@ -54,7 +54,6 @@ To try the image locally, run `docker build -f Dockerfile.backend -t marketlens-
    | `BACKEND_URL` | the Render URL, e.g. `https://marketlens-backend.onrender.com` (https, no trailing slash) | required: the build stops with a clear message without it |
    | `PROXY_SHARED_SECRET` | exactly the value from Render | required when the backend has one (the blueprint sets one) |
    | `SITE_PASSWORD` | a password of your choice | recommended: visitors must enter it before anything loads (any user name works) |
-   | `ENABLE_EXPERIMENTAL_COREPACK` | `1` | recommended: Vercel then installs with exactly the pnpm version in `package.json` (12.10.1) |
 
 4. Click **Deploy**. Open the address Vercel gives you. The browser asks for the password, then MarketLens loads with the yellow **DEMO FIXTURES** label. Run a research to check the whole path.
 
@@ -94,16 +93,17 @@ The local Ollama setup (`OPENAI_BASE_URL=http://127.0.0.1:11434/v1`) runs only o
 
 ## Updating
 
-Push to the deployed branch: Render and Vercel both redeploy on their own. `BACKEND_URL` is fixed when the web app is built, so redeploy Vercel after changing it. Changes to `SITE_PASSWORD` or `PROXY_SHARED_SECRET` also take effect on the next Vercel deploy.
+Push to the deployed branch: Render and Vercel both redeploy on their own. A Render service with a disk restarts in place, so the backend is unavailable for a short moment during each deploy, and a run in progress at that moment is marked failed. `BACKEND_URL` is fixed when the web app is built, so redeploy Vercel after changing it. Changes to `SITE_PASSWORD` or `PROXY_SHARED_SECRET` also take effect on the next Vercel deploy.
 
 ## If something goes wrong
 
 | What you see | Fix |
 |---|---|
 | Vercel build: "BACKEND_URL must be set to the public https URL…" | Add `BACKEND_URL` (https) to the Vercel project and redeploy. |
-| Vercel install fails over the pnpm version | Add `ENABLE_EXPERIMENTAL_COREPACK=1` and redeploy. |
+| Vercel install or build uses another command | Settings › Build and Deployment: turn off the **Override** toggles, so the commands from `apps/web/vercel.json` apply. |
 | Red "Backend unavailable" bar, or "This backend only accepts requests through the MarketLens web app" | `PROXY_SHARED_SECRET` is missing in Vercel or differs from Render's. Fix it and redeploy Vercel. |
 | The first visit takes a minute | The Render free plan was asleep. Use a paid plan to keep it awake. |
+| Render logs show the service ran out of memory | Change the instance to `1c-2g` (Settings › Instance Type). |
 | Research history disappears after a deploy | The backend has no disk at `/data` (free plan). |
 | Render deploy fails its health check | Open the service's **Logs**. A configuration problem is printed with the variable to fix (for example `SEC_USER_AGENT` in live mode). |
 

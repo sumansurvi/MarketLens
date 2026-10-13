@@ -6,19 +6,13 @@ import type { RunList, RunStatus } from "@/lib/api/types";
 import { niceTimestamp, timeAgo } from "@/lib/natural";
 import { usePolling } from "@/lib/use-api";
 
+import { SearchIcon } from "../icons";
 import { cn, Notice, Spinner } from "../ui";
+import { STATUS_DOT } from "./run-status";
+import { useSearchShortcut } from "./search";
 import { useWorkspace } from "./workspace-context";
 
 const TERMINAL = new Set<RunStatus>(["completed", "partial", "failed", "cancelled"]);
-
-const STATUS_DOT: Record<RunStatus, { dot: string; label: string }> = {
-  queued: { dot: "bg-ink-3", label: "Queued" },
-  running: { dot: "bg-accent animate-pulse", label: "Running" },
-  completed: { dot: "bg-good", label: "Complete" },
-  partial: { dot: "bg-warning", label: "Partial" },
-  failed: { dot: "bg-critical", label: "Failed" },
-  cancelled: { dot: "bg-ink-3", label: "Cancelled" },
-};
 
 function Heading({ title, action }: { title: string; action?: React.ReactNode }) {
   return (
@@ -35,13 +29,31 @@ function NewResearchButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mb-3 flex w-full items-center gap-2.5 rounded-xl border border-line bg-raised px-3 py-2.5 text-sm font-medium text-ink shadow-sm transition hover:border-accent hover:text-accent"
+      className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl border border-line bg-raised px-3 py-2.5 text-sm font-medium text-ink shadow-sm transition hover:border-accent hover:text-accent"
     >
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="h-[18px] w-[18px]">
         <path d="M12 20h9" />
         <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
       </svg>
       New research
+    </button>
+  );
+}
+
+/** Opens "Search research" (D-96), like ⌘K / Ctrl+K. */
+function SearchButton({ onClick }: { onClick: () => void }) {
+  const shortcut = useSearchShortcut();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label="Search research"
+      aria-keyshortcuts="Meta+K Control+K"
+      title={`Search research (${shortcut})`}
+      data-testid="search-research"
+      className="grid w-[42px] shrink-0 place-items-center rounded-xl border border-line bg-raised text-ink shadow-sm transition hover:border-accent hover:text-accent"
+    >
+      <SearchIcon />
     </button>
   );
 }
@@ -54,7 +66,10 @@ function History() {
   const activeId = ws.view?.kind === "run" ? ws.view.id : null;
   return (
     <section aria-label="Research history">
-      <NewResearchButton onClick={ws.goHome} />
+      <div className="mb-3 flex gap-2">
+        <NewResearchButton onClick={ws.goHome} />
+        <SearchButton onClick={ws.openSearch} />
+      </div>
       <Heading title="Research history" />
       {loading && !data && <Spinner label="Loading…" />}
       {error && !data && <Notice tone="warning">{error.message}</Notice>}

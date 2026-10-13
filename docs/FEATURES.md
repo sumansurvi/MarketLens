@@ -60,10 +60,10 @@ Everything happens on one screen, laid out like a chat app. Nothing opens a new 
 
 ```
 ┌──────────────── LIVE DATA / DEMO FIXTURES banner ─────────────────────────────────────────────────┐
-│ ML MarketLens                                          (History, Explore in narrower windows)    │
+│ ML MarketLens                                  (🔍, History, Explore in narrower windows)        │
 ├────────────────┬──────────────────────────────────────────────────┬───────────────────────────────┤
 │ RESEARCH       │ AAPL Apple Inc.  ✓Completed  LIVE DATA            │ TRY ONE OF THESE              │
-│ HISTORY   New  │ $336.64 ▲+6.09% “your full question…”             │  [AAPL] Explain recent move…  │
+│ [New] [🔍]     │ $336.64 ▲+6.09% “your full question…”             │  [AAPL] Explain recent move…  │
 │  AAPL ● …      │                  [Re-run][Compare][Details]       │  [NVDA] What changed…         │
 │  NVDA ● …      ├──────────────────────────────────────────────────┤  [MSFT] Fundamentals and gaps │
 │  MSFT ● …      │  Heads up (if anything limited the report)        │                               │
@@ -79,7 +79,7 @@ Everything happens on one screen, laid out like a chat app. Nothing opens a new 
 
 The right-hand **Try one of these** panel appears on wide windows (1280 px and up). On narrower windows the same cards are on the welcome screen.
 
-**Cost note:** with live data, each new research run uses about **3 of the 25 free Alpha Vantage requests per day**. Everything marked *free* below uses none.
+**Cost note:** with live data, each new research run uses up to **3 of the 25 free Alpha Vantage requests per day** (2 once a free key's news refusal is known, until the backend restarts). Everything marked *free* below uses none.
 
 ---
 
@@ -114,7 +114,7 @@ The right-hand **Try one of these** panel appears on wide windows (1280 px and u
 Open any finished run from the history (all *free*).
 
 - [ ] **C1. Frozen summary bar.** *Where:* top of the brief. *Expect:* ticker, company, status, LIVE/DEMO badge, latest price with ▲/▼ change, your full question (wrapped, never cut off), and the buttons. It stays put while you scroll.
-- [ ] **C2. Heads up card.** *Expect* (only when something limited the report): each problem in plain words, the data it affected, and "What you can do". Examples: "The data provider asked us to slow down", "Not included in the current data plan", "The AI model couldn't finish a step", "The fact-checker set aside N statements". Hover a card to see the technical code. If a retry could help, a **Try again** button appears.
+- [ ] **C2. Heads up card.** *Expect* (only when something limited the report): each problem in plain words, the data it affected, and "What you can do". Examples: "The data provider asked us to slow down", "Not included in the current data plan", "The AI model couldn't finish a step", "The fact-checker set aside N statements". No technical codes are shown. If a retry could help, a **Try again** button appears.
 - [ ] **C3. Research brief header.** *Expect:* company, window ("Last 3 months · Jul 11 – Oct 11, 2026", with a "default window" tag when you didn't choose one), exchange, and who wrote it ("AI analysis by qwen2.5:7b", or "Scripted demo analysis").
 - [ ] **C4. Freshness chips.** *Expect:* **Prices**, **Financials**, **Filings** and **News**, each with the date its data describes. Missing ones are shown as "not available" with a dashed border; financial figures are always from the company's latest report (older values aren't shown at all). **Fetched** shows when the data was downloaded. Hover any chip for what it means (Fetched gives the exact time).
 - [ ] **C5. Fact-check meter.** *Expect:* "Fact-check: N of M statements verified", a colored bar (verified, read with care, set aside), "X of Y numbers matched their source", and a link to what was set aside.
@@ -127,7 +127,7 @@ Open any finished run from the history (all *free*).
 - [ ] **C12. What this brief couldn't establish.** *Expect:* a plain list of unknowns (for example "No consensus estimates… were retrieved", "The retrieved evidence does not establish the causes of individual price moves"), plus **About the sources** and folded **Notes from the AI analysts**.
 - [ ] **C13. Set aside by the fact-checker.** *Try:* **Show what was set aside and why**. *Expect:* each rejected draft statement with a reason, such as "Numbers didn't match the sources" or "Not backed by a retrieved source". Advice or instruction-like text is replaced by "[Draft text not shown…]".
 - [ ] **C14. Statement labels.** *Expect:* type labels on every statement, and sometimes "read with care" (qualified) or "built from data, not the AI" (an AI step failed, so code wrote a plain summary instead). Hover any of them for what it means.
-- [ ] **C17. Every badge in the brief explains itself.** *Try:* hover (or Tab to) any label with a small ⓘ inside the brief (the history and the summary bar have none): **Partial** (◐), **Completed**, **LIVE DATA** / **DEMO FIXTURES**, **Source fact**, **Calculation**, **Interpretation**, **Scenario**, the freshness chips, **out of date** / **✓ current**, the fact-check counts, **default window**, the history's status and **DEMO** tags, and the data tags on Heads up cards. *Expect:* its definition in a sentence; Esc closes it. *Free.*
+- [ ] **C17. Every badge in the brief explains itself.** *Try:* hover (or Tab to) any label with a small ⓘ inside the brief (the history and the summary bar have none): **Partial** (◐), **Completed**, **LIVE DATA** / **DEMO FIXTURES**, **Source fact**, **Calculation**, **Interpretation**, **Scenario**, the freshness chips, **out of date** / **✓ current**, the fact-check counts, **default window**, and the data tags on Heads up cards. *Expect:* its definition in a sentence; Esc closes it. *Free.*
 - [ ] **C18. Jump to the set-aside statements.** *Try:* on a run with statements set aside, click **See what was set aside ↓** (Heads up card) or **Why some were set aside ↓** (fact-check meter). *Expect:* only the brief scrolls, the list opens, and it stops just below the summary bar; the rest of the screen doesn't move and no blank space appears. *Free.*
 - [ ] **C19. Jump to the bottom.** *Expect:* while there is more below, a round **↓** button floats at the bottom centre of the brief (like ChatGPT); clicking it scrolls to the end, and it disappears there. *Free.*
 - [ ] **C20. PDF, copy and share.** *Try:* **PDF** at the top right of a run, then choose **Save as PDF** in the window that opens. *Expect:* a PDF of the brief alone (no history, research bar or buttons), in light colours even in dark mode, with folded sections opened and a file name like "MarketLens - AAPL research - Oct 12, 2026". Then **Copy** / **Share** at the bottom right of the Summary or any findings section. *Expect:* a short confirmation; pasted text is readable, without internal IDs. *Free.*
@@ -138,27 +138,28 @@ Open any finished run from the history (all *free*).
 
 ### D. Checking where a number came from (the source panel)
 
-- [ ] **D1. Open a source.** *Try:* click any chip; each has its own name, for example **Price change**, **Largest daily drop**, **Revenue (quarter) · Jun 27, 2026**, **10-Q filing · Jul 31, 2026** or **reuters.com story · Oct 12**. *Expect:* a panel opens on the right (wide screens; on small screens it slides over) with the source, an "Open on …" link, dates, units, and **What the source says** in plain words. No internal IDs, field names or codes. *Free.*
+- [ ] **D1. Open a source.** *Try:* click any chip; each has its own name, for example **Price change**, **Largest daily drop**, **Revenue (quarter) · Jun 27, 2026**, **10-Q filing · Jul 31, 2026** or **reuters.com story · Oct 12**. *Expect:* a panel opens on the right (in a narrower window it slides over the brief) with the source, an "Open on …" link, dates, units, and **What the source says** in plain words. No internal IDs, field names or codes. *Free.*
 - [ ] **D2. Follow the link to the real document.** *Try:* on a **Filing** chip, open the **Link**. *Expect:* the actual filing on sec.gov. On a **Financials** chip, the link opens the SEC's own data for that figure. *Free.*
 - [ ] **D3. Calculations.** *Try:* a **Price change** or **Revenue growth** chip. *Expect:* **How it was calculated** in one plain sentence ("Change = (last close − first close) ÷ first close × 100…"), the values used with their dates, and **Calculated from** chips.
-- [ ] **D4. Cited by.** *Expect:* at the bottom of the panel, the statements that use this source.
+- [ ] **D4. Statements that use this source.** *Expect:* at the bottom of the panel, "N statements use this source" and those statements.
 - [ ] **D5. Close it.** *Try:* × or Esc. *Expect:* the panel closes, and focus returns to the chip you clicked.
 
 ### E. Actions on a run (buttons in the summary bar)
 
-- [ ] **E1. Re-run.** *Try:* **Re-run** on a finished run. *Expect:* a new run with the same question and window, marked "A re-run of an earlier run". The original stays unchanged. *Cost:* about 2 requests within 15 minutes, otherwise about 3.
+- [ ] **E1. Re-run.** *Try:* **Re-run** on a finished run. *Expect:* a new run with the same question and window, marked "A re-run of an earlier run". The original stays unchanged. *Cost:* about 1 request within 15 minutes (only the quote is refreshed), otherwise about 2.
 - [ ] **E2. Compare two periods.** *Try:* **Compare periods** → keep the suggested dates → **Compare periods**. *Expect:* the price change for each period, the trading days actually used (a weekend start moves to the next trading day), and the difference in percentage points. *Cost:* none, or 1 if the price data is more than 15 minutes old.
-- [ ] **E3. Details.** *Try:* **Details**. *Expect:* question, window, timing, data and model used, run ID; the status of the four data sources; every step; and every call to the data services (MCP tool calls) with its result. *Free.*
+- [ ] **E3. Details.** *Try:* **Details**. *Expect:* question, window, timing, data and model used; the status of the four data sources; every step; and every call to the data services (MCP tool calls) with its result. *Free.*
 
 Saved briefs, the watchlist and the Data status dialog were removed from the app on 2026-10-12 (D-81 in [`PROJECT_STATUS.md`](../PROJECT_STATUS.md)). The backend still has them: modes, capabilities and the three data services are in `curl -s localhost:8000/api/health | python3 -m json.tool`, provider details in `/api/data-status`, usage counts in `/api/analytics/summary`.
 
 ### F. Moving around (one screen, no page changes)
 
 - [ ] **F1. Research history.** *Where:* left. *Expect:* your runs, newest first, each with status, a DEMO tag if synthetic, a **Voice** tag if Lens started it, time ago and the full question; the open one is highlighted. **New research** (pencil icon, above the list) starts over with an empty research bar.
+- [ ] **F1a. Search research (D-96).** *Try:* press the search icon beside **New research** (or ⌘K / Ctrl+K anywhere). *Expect:* a **Search research** dialog with the cursor in the box. Empty, it suggests **Tickers you've researched** (click one to search it) and **Recent research**. Type `apple`, `nvda`, `cloud` or `revenue`. *Expect:* suggestions appear as you type, with the matching words highlighted. They match the ticker, the company name, the question, or a kept finding; a finding match shows the sentence it came from (❝ …). Every word must match. ↑ ↓ and Enter open a result, and Esc closes the dialog. No match shows a hint and **Start a new research**. *Free.*
 - [ ] **F2. Links and refresh.** *Try:* open a run, copy the address (`/?run=…`), refresh, or paste it in a new tab. *Expect:* the same run reopens.
 - [ ] **F3. Old addresses.** *Try:* `/research/<run id>`. *Expect:* that run opens in the same screen. `/watchlist`, `/settings` and `/briefs` were removed and show the "not found" page.
-- [ ] **F4. Keyboard.** *Try:* Enter in the research bar (starts research), Esc in any dialog (closes it), Tab inside a dialog (stays inside), and Tab from the very top of the page ("Skip to content" appears).
-- [ ] **F5. Narrower window.** *Try:* make the browser window narrower. *Expect:* below about 1280 px the **Try one of these** cards move to the welcome screen and **✦ Explore** appears at the top right; below about 1024 px the history opens from a **History** button. The research bar stays at the bottom. *Free.*
+- [ ] **F4. Keyboard.** *Try:* Enter in the research bar (starts research), ⌘K / Ctrl+K (search), Esc in any dialog (closes it), Tab inside a dialog (stays inside), and Tab from the very top of the page ("Skip to content" appears).
+- [ ] **F5. Narrower window.** *Try:* make the browser window narrower. *Expect:* below about 1280 px the **Try one of these** cards move to the welcome screen and **✦ Explore** appears at the top right; below about 1024 px the history opens from a **History** button and search from the 🔍 button next to it. The research bar stays at the bottom. *Free.*
 - [ ] **F6. Dark mode.** *Try:* switch your Mac to Dark appearance. *Expect:* the app follows.
 - [ ] **F7. Labels everywhere.** *Expect:* the top banner (**LIVE DATA** green or **DEMO FIXTURES** yellow) and the research-only note under the research bar are always visible.
 
@@ -226,7 +227,7 @@ You can't click these directly, but you can see their effects.
 
 A suggested order that shows most features. The first part costs nothing.
 
-1. **Look around** (free): the welcome screen and the research bar at the bottom, then click your live **AAPL** run in the history (F1).
+1. **Look around** (free): the welcome screen and the research bar at the bottom, then click your live **AAPL** run in the history (F1), and search your research for `revenue` (F1a).
 2. **Read the brief** (free): Heads up, freshness, fact-check meter, key numbers and chart, then scroll to the bottom (C1–C16).
 3. **Check a number** (free): click a **Financials** chip, then a **Filing** chip and open its link (D1–D5).
 4. **Run details and comparison**: **Details**, then **Compare periods** (E2, E3).

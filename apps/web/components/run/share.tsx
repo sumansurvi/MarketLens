@@ -10,8 +10,8 @@ import { cn } from "../ui";
 /*
  * Sharing a brief (D-87, D-91): a PDF button for the whole research at the top right of a run, and a
  * Copy / Share pair under each answer section. Shared text is readable prose (no IDs or raw
- * values). Links open the run in MarketLens, which runs on this computer, so they work where
- * MarketLens is running; the copied text works anywhere.
+ * values). Links point at the address MarketLens is served from: locally they work on this computer,
+ * and on a hosted deployment (D-94) for anyone who can open the site. The copied text works anywhere.
  */
 
 export function runLink(runId: string): string {

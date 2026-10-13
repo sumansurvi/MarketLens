@@ -1,4 +1,4 @@
-"""Research run routes: create (async), poll, list and cancel."""
+"""Research run routes: create (async), poll, list, search and cancel."""
 
 from __future__ import annotations
 
@@ -7,7 +7,14 @@ from marketlens_core.errors import ErrorCode, MarketLensError
 from marketlens_core.models import TERMINAL_RUN_STATUSES, ResearchRequest, ResearchRun, TimeHorizonInput
 
 from app.api.deps import get_container, get_session_id, valid_run_id
-from app.api.schemas import CreateResearchResponse, ErrorResponse, ResearchRunDetailResponse, RunListResponse
+from app.api.schemas import (
+    CreateResearchResponse,
+    ErrorResponse,
+    ResearchRunDetailResponse,
+    RunListResponse,
+    RunSearchResponse,
+    RunSearchResult,
+)
 from app.container import AppContainer
 
 router = APIRouter(prefix="/api/research", tags=["research"])
@@ -43,6 +50,21 @@ async def list_research(
 
     normalized = normalize_symbol(symbol) if symbol else None
     return RunListResponse(runs=container.runs.list_runs(limit=limit, symbol=normalized))
+
+
+# Declared before /{run_id} so "search" is not taken for a run ID.
+@router.get("/search", response_model=RunSearchResponse)
+async def search_research(
+    q: str = Query(min_length=1, max_length=100),
+    limit: int = Query(default=8, ge=1, le=20),
+    container: AppContainer = Depends(get_container),
+) -> RunSearchResponse:
+    """Find past research by ticker, company name, question or the text of its kept findings."""
+    hits = container.runs.search_runs(q, limit=limit)
+    return RunSearchResponse(
+        query=q,
+        results=[RunSearchResult(run=h.run, matched=h.matched, snippet=h.snippet) for h in hits],
+    )
 
 
 @router.get("/{run_id}", response_model=ResearchRunDetailResponse, responses=ERRORS)

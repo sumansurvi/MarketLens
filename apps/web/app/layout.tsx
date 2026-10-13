@@ -11,9 +11,12 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  // suppressHydrationWarning: browser extensions (Grammarly, password managers, translators) add
+  // attributes to <html> and <body> before React loads. It covers only these two elements' own
+  // attributes; mismatches anywhere inside the app are still reported.
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="h-full">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="h-full" suppressHydrationWarning>
         <StatusProvider>{children}</StatusProvider>
       </body>
     </html>

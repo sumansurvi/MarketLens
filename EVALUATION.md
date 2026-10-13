@@ -1,6 +1,6 @@
 # MarketLens — Evaluation Plan and Acceptance Tests
 
-> **As built (reviewed 2026-10-12).** The evaluation in this plan is implemented (`tests/evaluation`, `scripts/run_evaluation.py`; D-72). Latest run: 49/49 cases passed and every gate met (`reports/evaluation/latest.md`, 2026-10-12). One case changed since: `normal-nvda-issuer-revenue-tag` checks the cited evidence's SEC concept (`cited_concepts`) instead of the tag name in the statement text, because statements no longer carry internal tags (D-86). Results are fixture-mode only.
+> **As built (reviewed 2026-10-13).** The evaluation in this plan is implemented (`tests/evaluation`, `scripts/run_evaluation.py`; D-72). Latest run (2026-10-13): 49/49 cases passed and every gate met (`reports/evaluation/latest.md`). One case changed since: `normal-nvda-issuer-revenue-tag` checks the cited evidence's SEC concept (`cited_concepts`) instead of the tag name in the statement text, because statements no longer carry internal tags (D-86). Results are fixture-mode only.
 
 ## 1. Purpose
 
