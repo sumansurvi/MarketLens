@@ -1,0 +1,87 @@
+{
+  "case_id": "normal-aapl-explicit-window",
+  "category": "normal_research",
+  "description": "Explicit window 2026-07-15 to 2026-09-15: tools receive exactly those dates and the change uses the first/last trading days inside it.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "How did Apple trade between mid-July and mid-September?",
+    "time_horizon": {
+      "start_date": "2026-07-15",
+      "end_date": "2026-09-15"
+    }
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "required_tools": [
+      {
+        "tool": "resolve_symbol",
+        "args": {
+          "symbol": "AAPL"
+        }
+      },
+      {
+        "tool": "get_provider_status"
+      },
+      {
+        "tool": "get_quote",
+        "args": {
+          "symbol": "AAPL"
+        }
+      },
+      {
+        "tool": "get_historical_prices",
+        "args": {
+          "symbol": "AAPL",
+          "start_date": "2026-07-15",
+          "end_date": "2026-09-15",
+          "interval": "daily",
+          "adjusted": false
+        }
+      },
+      {
+        "tool": "calculate_price_change",
+        "args": {
+          "symbol": "AAPL",
+          "start_date": "2026-07-15",
+          "end_date": "2026-09-15",
+          "price_field": "close"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "AAPL",
+          "period_type": "quarterly"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "AAPL",
+          "period_type": "annual"
+        }
+      },
+      {
+        "tool": "search_company_filings",
+        "args": {
+          "symbol": "AAPL"
+        }
+      },
+      {
+        "tool": "get_filing_excerpt"
+      },
+      {
+        "tool": "search_company_news",
+        "args": {
+          "symbol": "AAPL"
+        }
+      }
+    ],
+    "claims_include": [
+      "2026-09-15"
+    ]
+  }
+}

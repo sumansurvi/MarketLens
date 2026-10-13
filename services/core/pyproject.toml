@@ -1,0 +1,20 @@
+[project]
+name = "marketlens-core"
+version = "0.1.0"
+description = "Shared MarketLens configuration, domain models, policies, persistence and provider adapters."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.14",
+  "pydantic-settings>=2.15",
+  "httpx2>=2.13",
+  "mcp>=2.3,<3",
+  "defusedxml>=0.7.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "marketlens_core"
+module-root = ""

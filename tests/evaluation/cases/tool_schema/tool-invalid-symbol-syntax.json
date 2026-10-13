@@ -1,0 +1,14 @@
+{
+  "case_id": "tool-invalid-symbol-syntax",
+  "category": "tool_schema",
+  "kind": "research",
+  "description": "A malformed symbol is rejected before any run or tool call (INVALID_SYMBOL).",
+  "request": {
+    "symbol": "AA PL",
+    "question": "Research this."
+  },
+  "expect": {
+    "http_status": 422,
+    "error_code": "INVALID_SYMBOL"
+  }
+}

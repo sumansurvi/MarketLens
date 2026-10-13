@@ -1,0 +1,48 @@
+{
+  "case_id": "contra-sec-vs-provider-fundamentals",
+  "category": "contradictions",
+  "description": "SEC revenue missing triggers provider metrics; provider net income differs from SEC for the same quarter: contradiction surfaced.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple fundamentals."
+  },
+  "overlays": {
+    "sec/companyfacts/CIK0000320193.json": {
+      "delete": [
+        [
+          "facts",
+          "us-gaap",
+          "RevenueFromContractWithCustomerExcludingAssessedTax"
+        ]
+      ]
+    },
+    "alpha_vantage/INCOME_STATEMENT/AAPL.json": {
+      "set_quarterly_report": {
+        "fiscalDateEnding": "2026-06-27",
+        "values": {
+          "netIncome": "21500000000"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "error_codes_include": [
+      "CONTRADICTORY_EVIDENCE"
+    ],
+    "gap_text_includes": [
+      "differs between SEC company facts and the provider-normalized metrics"
+    ],
+    "required_tools": [
+      {
+        "tool": "get_financial_metrics",
+        "args": {
+          "symbol": "AAPL"
+        }
+      }
+    ]
+  }
+}

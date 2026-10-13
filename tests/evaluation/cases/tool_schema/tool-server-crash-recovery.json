@@ -1,0 +1,33 @@
+{
+  "case_id": "tool-server-crash-recovery",
+  "category": "tool_schema",
+  "kind": "steps",
+  "description": "A crashed MCP server is reported as unavailable (never as data), restarted, and calls recover.",
+  "steps": [
+    {
+      "mcp": [
+        "market_data",
+        "get_quote",
+        {
+          "symbol": "AAPL"
+        }
+      ]
+    },
+    {
+      "kill_server": "market_data"
+    },
+    {
+      "mcp": [
+        "market_data",
+        "get_quote",
+        {
+          "symbol": "AAPL"
+        }
+      ],
+      "retry_until_ok": 20,
+      "allowed_errors": [
+        "MCP_SERVER_UNAVAILABLE"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,64 @@
+{
+  "case_id": "voice-interruption-and-reconnect",
+  "category": "voice",
+  "kind": "steps",
+  "settings": {
+    "voice_mode": "livekit"
+  },
+  "description": "Ending the voice session mid-research keeps the run going to completion; the old room is closed and a new session starts cleanly.",
+  "steps": [
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room": "room_name"
+      }
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/research",
+      "client": "worker",
+      "json": {
+        "symbol": "NVDA",
+        "question": "What changed at Nvidia?"
+      },
+      "expect_status": 202,
+      "save": {
+        "run": "run_id"
+      }
+    },
+    {
+      "http": "POST /api/voice/session/{room}/end",
+      "expect_status": 200,
+      "expect_json": {
+        "ended": true
+      }
+    },
+    {
+      "wait_run": "{run}",
+      "expect_status": [
+        "completed"
+      ]
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room}/status",
+      "client": "worker",
+      "expect_status": 410,
+      "expect_code": "VOICE_SESSION_EXPIRED"
+    },
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room2": "room_name"
+      }
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room2}/status?run_id={run}",
+      "client": "worker",
+      "expect_status": 200,
+      "expect_json": {
+        "status": "completed"
+      }
+    }
+  ]
+}

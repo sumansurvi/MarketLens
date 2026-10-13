@@ -1,0 +1,22 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:GLOBAL_QUOTE"
+  },
+  "Global Quote": {
+    "01. symbol": "AAPL",
+    "02. open": "228.9600",
+    "03. high": "232.6600",
+    "04. low": "226.9900",
+    "05. price": "230.4200",
+    "06. volume": "56385216",
+    "07. latest trading day": "2026-09-30",
+    "08. previous close": "227.7900",
+    "09. change": "2.6300",
+    "10. change percent": "1.1546%"
+  }
+}

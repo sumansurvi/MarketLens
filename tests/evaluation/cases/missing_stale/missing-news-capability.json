@@ -1,0 +1,21 @@
+{
+  "case_id": "missing-news-capability",
+  "category": "missing_stale",
+  "description": "News endpoint unavailable by plan (MSFT): no substitute news, the category is labeled unavailable with a reason.",
+  "kind": "research",
+  "request": {
+    "symbol": "MSFT",
+    "question": "What does recent news say about Microsoft?"
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "categories": {
+      "news": "unavailable"
+    },
+    "gap_reason_codes_include": [
+      "CAPABILITY_UNAVAILABLE"
+    ]
+  }
+}

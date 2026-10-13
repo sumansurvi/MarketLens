@@ -1,0 +1,95 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:EARNINGS"
+  },
+  "symbol": "MSFT",
+  "annualEarnings": [
+    {
+      "fiscalDateEnding": "2026-06-30",
+      "reportedEPS": "14.60"
+    },
+    {
+      "fiscalDateEnding": "2025-06-30",
+      "reportedEPS": "12.81"
+    }
+  ],
+  "quarterlyEarnings": [
+    {
+      "fiscalDateEnding": "2026-06-30",
+      "reportedDate": "2026-07-30",
+      "reportedEPS": "4.04",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2026-03-31",
+      "reportedDate": "2026-04-29",
+      "reportedEPS": "3.60",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-12-31",
+      "reportedDate": "2026-01-28",
+      "reportedEPS": "3.65",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-09-30",
+      "reportedDate": "2025-10-29",
+      "reportedEPS": "3.31",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-06-30",
+      "reportedDate": "2025-07-30",
+      "reportedEPS": "3.53",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-03-31",
+      "reportedDate": "2025-04-30",
+      "reportedEPS": "3.22",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-12-31",
+      "reportedDate": "2025-01-29",
+      "reportedEPS": "3.12",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-09-30",
+      "reportedDate": "2024-10-30",
+      "reportedEPS": "2.94",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    }
+  ]
+}

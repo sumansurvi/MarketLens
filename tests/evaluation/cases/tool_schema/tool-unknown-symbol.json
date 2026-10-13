@@ -1,0 +1,14 @@
+{
+  "case_id": "tool-unknown-symbol",
+  "category": "tool_schema",
+  "kind": "research",
+  "description": "A symbol outside coverage is rejected with the covered universe; no other ticker is guessed.",
+  "request": {
+    "symbol": "ZZZZ",
+    "question": "Research this."
+  },
+  "expect": {
+    "http_status": 422,
+    "error_code": "UNKNOWN_SYMBOL"
+  }
+}

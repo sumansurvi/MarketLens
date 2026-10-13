@@ -1,0 +1,5440 @@
+{
+  "components": {
+    "schemas": {
+      "ActionStatus": {
+        "enum": [
+          "pending",
+          "confirmed",
+          "consumed",
+          "expired",
+          "cancelled",
+          "failed"
+        ],
+        "title": "ActionStatus",
+        "type": "string"
+      },
+      "ActionType": {
+        "enum": [
+          "save_research_brief",
+          "add_watchlist_symbol",
+          "remove_watchlist_symbol"
+        ],
+        "title": "ActionType",
+        "type": "string"
+      },
+      "AgentStep": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "seq": {
+            "title": "Seq",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/StepStatus"
+          },
+          "step_key": {
+            "title": "Step Key",
+            "type": "string"
+          },
+          "summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Summary"
+          }
+        },
+        "required": [
+          "run_id",
+          "seq",
+          "step_key",
+          "agent",
+          "status",
+          "summary",
+          "started_at",
+          "ended_at",
+          "latency_ms",
+          "error_code",
+          "detail"
+        ],
+        "title": "AgentStep",
+        "type": "object"
+      },
+      "AnalyticsEventRequest": {
+        "additionalProperties": false,
+        "description": "Events the browser may report; everything else is recorded server-side.",
+        "properties": {
+          "event": {
+            "enum": [
+              "voice_connection_succeeded",
+              "voice_connection_failed"
+            ],
+            "title": "Event",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "permission_denied",
+                  "unreachable",
+                  "agent_failed",
+                  "agent_left",
+                  "rate_limited",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          }
+        },
+        "required": [
+          "event"
+        ],
+        "title": "AnalyticsEventRequest",
+        "type": "object"
+      },
+      "AnalyticsSummary": {
+        "description": "Aggregate local analytics: counts and rates only, no personal data or free text.",
+        "properties": {
+          "categories": {
+            "additionalProperties": {
+              "additionalProperties": {
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            "title": "Categories",
+            "type": "object"
+          },
+          "event_counts": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Event Counts",
+            "type": "object"
+          },
+          "periods_compared": {
+            "title": "Periods Compared",
+            "type": "integer"
+          },
+          "runs": {
+            "$ref": "#/components/schemas/RunAnalytics"
+          },
+          "voice": {
+            "$ref": "#/components/schemas/VoiceAnalytics"
+          },
+          "workspace": {
+            "$ref": "#/components/schemas/WorkspaceAnalytics"
+          }
+        },
+        "required": [
+          "event_counts",
+          "runs",
+          "categories",
+          "voice",
+          "workspace",
+          "periods_compared"
+        ],
+        "title": "AnalyticsSummary",
+        "type": "object"
+      },
+      "ApiError": {
+        "properties": {
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "details": {
+            "additionalProperties": true,
+            "title": "Details",
+            "type": "object"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "request_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Request Id"
+          },
+          "retry_after_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After Seconds"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "retryable",
+          "retry_after_seconds",
+          "details",
+          "request_id"
+        ],
+        "title": "ApiError",
+        "type": "object"
+      },
+      "AsOfMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "earliest_retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Earliest Retrieved At"
+          },
+          "fixture_dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Dataset Version"
+          },
+          "latest_filing_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Filing Date"
+          },
+          "latest_fiscal_period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Fiscal Period End"
+          },
+          "latest_news_published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest News Published At"
+          },
+          "latest_retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Retrieved At"
+          },
+          "market_observation_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Market Observation Date"
+          },
+          "price_series_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Series End"
+          },
+          "reference_basis": {
+            "title": "Reference Basis",
+            "type": "string"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reference_time",
+          "reference_basis",
+          "market_observation_date",
+          "price_series_end",
+          "latest_filing_date",
+          "latest_fiscal_period_end",
+          "latest_news_published_at",
+          "earliest_retrieved_at",
+          "latest_retrieved_at",
+          "fixture_dataset_version"
+        ],
+        "title": "AsOfMetadata",
+        "type": "object"
+      },
+      "BriefListResponse": {
+        "properties": {
+          "briefs": {
+            "items": {
+              "$ref": "#/components/schemas/SavedBriefSummary"
+            },
+            "title": "Briefs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "briefs"
+        ],
+        "title": "BriefListResponse",
+        "type": "object"
+      },
+      "BriefSection": {
+        "enum": [
+          "executive_summary",
+          "market_movement",
+          "fundamentals",
+          "filings",
+          "recent_events",
+          "positive_evidence",
+          "negative_evidence",
+          "risks",
+          "interpretation",
+          "scenarios"
+        ],
+        "title": "BriefSection",
+        "type": "string"
+      },
+      "CapabilityStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "available": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "name",
+          "available",
+          "note"
+        ],
+        "title": "CapabilityStatus",
+        "type": "object"
+      },
+      "CategoryStatus": {
+        "enum": [
+          "available",
+          "partial",
+          "unavailable",
+          "failed",
+          "not_requested"
+        ],
+        "title": "CategoryStatus",
+        "type": "string"
+      },
+      "ClaimType": {
+        "enum": [
+          "source_fact",
+          "calculation",
+          "interpretation",
+          "scenario"
+        ],
+        "title": "ClaimType",
+        "type": "string"
+      },
+      "CompanyIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "cik": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cik"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "coverage": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "company_name",
+          "cik",
+          "exchange",
+          "coverage",
+          "is_fixture"
+        ],
+        "title": "CompanyIdentity",
+        "type": "object"
+      },
+      "ComparePeriod": {
+        "additionalProperties": false,
+        "properties": {
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date"
+        ],
+        "title": "ComparePeriod",
+        "type": "object"
+      },
+      "ComparePeriodsRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/ComparePeriod"
+            },
+            "maxItems": 2,
+            "minItems": 2,
+            "title": "Periods",
+            "type": "array"
+          },
+          "symbol": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "periods"
+        ],
+        "title": "ComparePeriodsRequest",
+        "type": "object"
+      },
+      "ComparePeriodsResponse": {
+        "description": "Two deterministic price-change calculations with the observation dates actually used.",
+        "properties": {
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "difference_note": {
+            "title": "Difference Note",
+            "type": "string"
+          },
+          "difference_percentage_points": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference Percentage Points"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "periods": {
+            "items": {
+              "$ref": "#/components/schemas/PeriodChange"
+            },
+            "title": "Periods",
+            "type": "array"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "company_name",
+          "periods",
+          "difference_percentage_points",
+          "difference_note",
+          "is_fixture",
+          "evidence"
+        ],
+        "title": "ComparePeriodsResponse",
+        "type": "object"
+      },
+      "ConfirmActionResponse": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PendingAction"
+          },
+          "result": {
+            "additionalProperties": true,
+            "title": "Result",
+            "type": "object"
+          }
+        },
+        "required": [
+          "action",
+          "result"
+        ],
+        "title": "ConfirmActionResponse",
+        "type": "object"
+      },
+      "CreateResearchResponse": {
+        "properties": {
+          "poll_after_ms": {
+            "default": 800,
+            "title": "Poll After Ms",
+            "type": "integer"
+          },
+          "poll_url": {
+            "title": "Poll Url",
+            "type": "string"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ResearchRun"
+          }
+        },
+        "required": [
+          "run",
+          "poll_url",
+          "poll_after_ms"
+        ],
+        "title": "CreateResearchResponse",
+        "type": "object"
+      },
+      "DataMode": {
+        "enum": [
+          "live",
+          "fixture",
+          "mixed"
+        ],
+        "title": "DataMode",
+        "type": "string"
+      },
+      "DataSourceStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/ResearchCategory"
+          },
+          "evidence_count": {
+            "default": 0,
+            "title": "Evidence Count",
+            "type": "integer"
+          },
+          "latest_observation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Observation"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "source_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SourceMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Name"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CategoryStatus"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "category",
+          "status",
+          "source_name",
+          "source_mode",
+          "reason_code",
+          "message",
+          "evidence_count",
+          "latest_observation",
+          "retrieved_at",
+          "tools"
+        ],
+        "title": "DataSourceStatus",
+        "type": "object"
+      },
+      "DataStatusResponse": {
+        "properties": {
+          "capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "data_mode": {
+            "title": "Data Mode",
+            "type": "string"
+          },
+          "fixture_dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Dataset Version"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "latest_research_by_symbol": {
+            "additionalProperties": {
+              "format": "date-time",
+              "type": "string"
+            },
+            "title": "Latest Research By Symbol",
+            "type": "object"
+          },
+          "notices": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notices",
+            "type": "array"
+          },
+          "reference_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Basis"
+          },
+          "reference_time": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Time"
+          },
+          "servers": {
+            "items": {
+              "$ref": "#/components/schemas/ServerStatusData"
+            },
+            "title": "Servers",
+            "type": "array"
+          },
+          "unavailable_servers": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Unavailable Servers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "data_mode",
+          "is_fixture",
+          "fixture_dataset_version",
+          "reference_time",
+          "reference_basis",
+          "servers",
+          "unavailable_servers",
+          "latest_research_by_symbol",
+          "capabilities",
+          "notices"
+        ],
+        "title": "DataStatusResponse",
+        "type": "object"
+      },
+      "ErrorCode": {
+        "enum": [
+          "INVALID_INPUT",
+          "INVALID_SYMBOL",
+          "UNKNOWN_SYMBOL",
+          "NOT_FOUND",
+          "CAPABILITY_UNAVAILABLE",
+          "DATA_UNAVAILABLE",
+          "RATE_LIMITED",
+          "PROVIDER_TIMEOUT",
+          "PROVIDER_AUTH_FAILED",
+          "MALFORMED_PROVIDER_RESPONSE",
+          "DATE_RANGE_TOO_LARGE",
+          "SCHEMA_VALIDATION_FAILED",
+          "MCP_SERVER_UNAVAILABLE",
+          "MCP_TOOL_NOT_ALLOWED",
+          "CONFIRMATION_REQUIRED",
+          "INVALID_CONFIRMATION_GRANT",
+          "CONFIRMATION_EXPIRED",
+          "ACTION_ALREADY_CONSUMED",
+          "PAYLOAD_HASH_MISMATCH",
+          "PERSISTENCE_ERROR",
+          "INTERNAL_ERROR",
+          "MODE_MISMATCH",
+          "RUN_NOT_CANCELLABLE",
+          "REQUEST_TOO_LARGE",
+          "VOICE_NOT_CONFIGURED",
+          "LLM_UNAVAILABLE",
+          "BUDGET_EXCEEDED",
+          "REQUEST_NOT_ALLOWED",
+          "CONTRADICTORY_EVIDENCE",
+          "STALE_DATA",
+          "VOICE_SESSION_EXPIRED",
+          "RUN_IN_PROGRESS"
+        ],
+        "title": "ErrorCode",
+        "type": "string"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ApiError"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "type": "object"
+      },
+      "EventEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "headline": {
+            "title": "Headline",
+            "type": "string"
+          },
+          "in_requested_window": {
+            "default": true,
+            "title": "In Requested Window",
+            "type": "boolean"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "published_at_tz_known": {
+            "default": false,
+            "title": "Published At Tz Known",
+            "type": "boolean"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "relevance_note": {
+            "title": "Relevance Note",
+            "type": "string"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "headline",
+          "publisher",
+          "url",
+          "published_at",
+          "published_at_tz_known",
+          "retrieved_at",
+          "relevance_note",
+          "in_requested_window",
+          "flags"
+        ],
+        "title": "EventEntry",
+        "type": "object"
+      },
+      "EvidenceItem": {
+        "additionalProperties": false,
+        "description": "One retrieved or calculated piece of evidence (MCP_TOOLS \u00a73.1).",
+        "properties": {
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "excerpt": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Excerpt"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "freshness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Freshness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "published_at_tz_known": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At Tz Known"
+          },
+          "published_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published Date"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "units": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Units"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "symbol",
+          "title",
+          "source_name",
+          "provider",
+          "source_url",
+          "published_at",
+          "published_at_tz_known",
+          "published_date",
+          "period_start",
+          "period_end",
+          "retrieved_at",
+          "currency",
+          "units",
+          "source_mode",
+          "is_fixture",
+          "content_hash",
+          "excerpt",
+          "payload",
+          "freshness",
+          "flags",
+          "notes"
+        ],
+        "title": "EvidenceItem",
+        "type": "object"
+      },
+      "EvidenceKind": {
+        "enum": [
+          "price_series",
+          "quote",
+          "financial_metric",
+          "filing",
+          "news",
+          "calculation"
+        ],
+        "title": "EvidenceKind",
+        "type": "string"
+      },
+      "FocusArea": {
+        "enum": [
+          "price_movement",
+          "fundamentals",
+          "filings",
+          "news",
+          "risks"
+        ],
+        "title": "FocusArea",
+        "type": "string"
+      },
+      "Freshness": {
+        "additionalProperties": false,
+        "properties": {
+          "age_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age Days"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "observed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Observed"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FreshnessStatus"
+          },
+          "threshold_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Threshold Days"
+          }
+        },
+        "required": [
+          "status",
+          "reference_time",
+          "observed",
+          "age_days",
+          "threshold_days",
+          "note"
+        ],
+        "title": "Freshness",
+        "type": "object"
+      },
+      "FreshnessStatus": {
+        "enum": [
+          "fresh",
+          "stale",
+          "unknown"
+        ],
+        "title": "FreshnessStatus",
+        "type": "string"
+      },
+      "GapItem": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "severity": {
+            "default": "info",
+            "enum": [
+              "info",
+              "material"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "category",
+          "description",
+          "reason_code",
+          "severity"
+        ],
+        "title": "GapItem",
+        "type": "object"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "title": "Detail",
+            "type": "array"
+          }
+        },
+        "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "properties": {
+          "app_env": {
+            "title": "App Env",
+            "type": "string"
+          },
+          "app_mode": {
+            "title": "App Mode",
+            "type": "string"
+          },
+          "capabilities": {
+            "additionalProperties": {
+              "type": "boolean"
+            },
+            "title": "Capabilities",
+            "type": "object"
+          },
+          "data_mode": {
+            "title": "Data Mode",
+            "type": "string"
+          },
+          "demo_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Demo Notice"
+          },
+          "llm_mode": {
+            "title": "Llm Mode",
+            "type": "string"
+          },
+          "mcp_servers": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/McpServerStatus"
+            },
+            "title": "Mcp Servers",
+            "type": "object"
+          },
+          "policy": {
+            "$ref": "#/components/schemas/PolicyInfo"
+          },
+          "research_only_notice": {
+            "title": "Research Only Notice",
+            "type": "string"
+          },
+          "server_time": {
+            "format": "date-time",
+            "title": "Server Time",
+            "type": "string"
+          },
+          "service": {
+            "default": "marketlens-backend",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "default": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_transport": {
+            "enum": [
+              "mcp_stdio",
+              "in_process"
+            ],
+            "title": "Tool Transport",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          },
+          "voice_enabled": {
+            "title": "Voice Enabled",
+            "type": "boolean"
+          },
+          "voice_mode": {
+            "title": "Voice Mode",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "status",
+          "service",
+          "version",
+          "app_env",
+          "app_mode",
+          "data_mode",
+          "llm_mode",
+          "voice_mode",
+          "voice_enabled",
+          "capabilities",
+          "tool_transport",
+          "mcp_servers",
+          "demo_notice",
+          "research_only_notice",
+          "policy",
+          "warnings",
+          "server_time"
+        ],
+        "title": "HealthResponse",
+        "type": "object"
+      },
+      "KeyMetric": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "title": "As Of",
+            "type": "string"
+          },
+          "claim_type": {
+            "$ref": "#/components/schemas/ClaimType"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "display_value": {
+            "title": "Display Value",
+            "type": "string"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "group": {
+            "enum": [
+              "market",
+              "fundamentals"
+            ],
+            "title": "Group",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "period_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Label"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "label",
+          "value",
+          "display_value",
+          "unit",
+          "currency",
+          "as_of",
+          "period_label",
+          "evidence_ids",
+          "claim_type",
+          "group",
+          "note"
+        ],
+        "title": "KeyMetric",
+        "type": "object"
+      },
+      "McpServerStatus": {
+        "properties": {
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "restarts": {
+            "title": "Restarts",
+            "type": "integer"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ready",
+          "tools",
+          "restarts",
+          "last_error"
+        ],
+        "title": "McpServerStatus",
+        "type": "object"
+      },
+      "Methodology": {
+        "additionalProperties": false,
+        "properties": {
+          "data_mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "deterministic_calculations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Deterministic Calculations",
+            "type": "array"
+          },
+          "llm_mode": {
+            "title": "Llm Mode",
+            "type": "string"
+          },
+          "llm_model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Llm Model"
+          },
+          "model_generated": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Model Generated",
+            "type": "array"
+          },
+          "sources_used": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sources Used",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/MethodologyStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          }
+        },
+        "required": [
+          "steps",
+          "deterministic_calculations",
+          "model_generated",
+          "llm_mode",
+          "llm_model",
+          "data_mode",
+          "sources_used"
+        ],
+        "title": "Methodology",
+        "type": "object"
+      },
+      "MethodologyStep": {
+        "additionalProperties": false,
+        "properties": {
+          "agent": {
+            "title": "Agent",
+            "type": "string"
+          },
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "tools": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Tools",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name",
+          "description",
+          "agent",
+          "tools"
+        ],
+        "title": "MethodologyStep",
+        "type": "object"
+      },
+      "PendingAction": {
+        "additionalProperties": false,
+        "properties": {
+          "action_id": {
+            "title": "Action Id",
+            "type": "string"
+          },
+          "action_type": {
+            "$ref": "#/components/schemas/ActionType"
+          },
+          "confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed At"
+          },
+          "consumed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "origin": {
+            "default": "ui",
+            "enum": [
+              "ui",
+              "voice",
+              "agent"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "payload_hash": {
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ActionStatus"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "action_id",
+          "action_type",
+          "run_id",
+          "symbol",
+          "title",
+          "summary",
+          "payload_hash",
+          "status",
+          "origin",
+          "created_at",
+          "expires_at",
+          "confirmed_at",
+          "consumed_at",
+          "result"
+        ],
+        "title": "PendingAction",
+        "type": "object"
+      },
+      "PendingActionResponse": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/PendingAction"
+          },
+          "requires_confirmation": {
+            "default": true,
+            "title": "Requires Confirmation",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action",
+          "requires_confirmation"
+        ],
+        "title": "PendingActionResponse",
+        "type": "object"
+      },
+      "PeriodChange": {
+        "properties": {
+          "calculation": {
+            "$ref": "#/components/schemas/PriceChangeCalculation"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "label",
+          "calculation"
+        ],
+        "title": "PeriodChange",
+        "type": "object"
+      },
+      "PolicyInfo": {
+        "properties": {
+          "brokerage_integration": {
+            "title": "Brokerage Integration",
+            "type": "boolean"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "persistent_writes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Persistent Writes",
+            "type": "array"
+          },
+          "personalized_recommendations": {
+            "title": "Personalized Recommendations",
+            "type": "boolean"
+          },
+          "research_only": {
+            "title": "Research Only",
+            "type": "boolean"
+          },
+          "trading_supported": {
+            "title": "Trading Supported",
+            "type": "boolean"
+          },
+          "writes_require_confirmation_grant": {
+            "title": "Writes Require Confirmation Grant",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "research_only",
+          "trading_supported",
+          "brokerage_integration",
+          "personalized_recommendations",
+          "persistent_writes",
+          "writes_require_confirmation_grant",
+          "notice"
+        ],
+        "title": "PolicyInfo",
+        "type": "object"
+      },
+      "PriceChangeCalculation": {
+        "additionalProperties": false,
+        "properties": {
+          "absolute_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Change"
+          },
+          "currency": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Currency"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "end_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Value"
+          },
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "formula": {
+            "default": "(end_value - start_value) / start_value * 100",
+            "title": "Formula",
+            "type": "string"
+          },
+          "input_evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Input Evidence Ids",
+            "type": "array"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "percentage_change": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Percentage Change"
+          },
+          "price_field": {
+            "default": "close",
+            "enum": [
+              "close",
+              "open",
+              "high",
+              "low"
+            ],
+            "title": "Price Field",
+            "type": "string"
+          },
+          "requested_end": {
+            "format": "date",
+            "title": "Requested End",
+            "type": "string"
+          },
+          "requested_start": {
+            "format": "date",
+            "title": "Requested Start",
+            "type": "string"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          },
+          "start_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Value"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "unavailable_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unavailable Reason"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "symbol",
+          "price_field",
+          "requested_start",
+          "requested_end",
+          "start_value",
+          "start_date",
+          "end_value",
+          "end_date",
+          "absolute_change",
+          "percentage_change",
+          "formula",
+          "input_evidence_ids",
+          "currency",
+          "unavailable_reason",
+          "warnings",
+          "is_fixture",
+          "evidence_id"
+        ],
+        "title": "PriceChangeCalculation",
+        "type": "object"
+      },
+      "ProposeActionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "action_type": {
+            "$ref": "#/components/schemas/ActionType"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "pattern": "^run_[0-9a-f]{16}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "symbol": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symbol"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "action_type"
+        ],
+        "title": "ProposeActionRequest",
+        "type": "object"
+      },
+      "ResearchBrief": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "$ref": "#/components/schemas/AsOfMetadata"
+          },
+          "brief_version": {
+            "const": "1.0",
+            "default": "1.0",
+            "title": "Brief Version",
+            "type": "string"
+          },
+          "claims": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchClaim"
+            },
+            "title": "Claims",
+            "type": "array"
+          },
+          "company": {
+            "$ref": "#/components/schemas/CompanyIdentity"
+          },
+          "data_mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "disclaimer": {
+            "title": "Disclaimer",
+            "type": "string"
+          },
+          "fixture_disclosure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Disclosure"
+          },
+          "generated_at": {
+            "format": "date-time",
+            "title": "Generated At",
+            "type": "string"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "key_metrics": {
+            "items": {
+              "$ref": "#/components/schemas/KeyMetric"
+            },
+            "title": "Key Metrics",
+            "type": "array"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "llm_mode": {
+            "title": "Llm Mode",
+            "type": "string"
+          },
+          "methodology": {
+            "$ref": "#/components/schemas/Methodology"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "recent_events": {
+            "items": {
+              "$ref": "#/components/schemas/EventEntry"
+            },
+            "title": "Recent Events",
+            "type": "array"
+          },
+          "report_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "review": {
+            "$ref": "#/components/schemas/ReviewSummary"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "source_quality_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Source Quality Notes",
+            "type": "array"
+          },
+          "source_status": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceStatus"
+            },
+            "title": "Source Status",
+            "type": "array"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceRef"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "time_horizon": {
+            "$ref": "#/components/schemas/TimeHorizon"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "unknowns_and_gaps": {
+            "items": {
+              "$ref": "#/components/schemas/GapItem"
+            },
+            "title": "Unknowns And Gaps",
+            "type": "array"
+          },
+          "withheld_claims": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchClaim"
+            },
+            "title": "Withheld Claims",
+            "type": "array"
+          }
+        },
+        "required": [
+          "brief_version",
+          "run_id",
+          "title",
+          "company",
+          "question",
+          "time_horizon",
+          "generated_at",
+          "report_status",
+          "data_mode",
+          "llm_mode",
+          "is_fixture",
+          "as_of",
+          "key_metrics",
+          "recent_events",
+          "claims",
+          "withheld_claims",
+          "unknowns_and_gaps",
+          "source_quality_notes",
+          "sources",
+          "source_status",
+          "methodology",
+          "limitations",
+          "review",
+          "disclaimer",
+          "fixture_disclosure"
+        ],
+        "title": "ResearchBrief",
+        "type": "object"
+      },
+      "ResearchCategory": {
+        "enum": [
+          "market",
+          "fundamentals",
+          "filings",
+          "news"
+        ],
+        "title": "ResearchCategory",
+        "type": "string"
+      },
+      "ResearchClaim": {
+        "additionalProperties": false,
+        "properties": {
+          "assumptions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assumptions",
+            "type": "array"
+          },
+          "claim_id": {
+            "title": "Claim Id",
+            "type": "string"
+          },
+          "claim_type": {
+            "$ref": "#/components/schemas/ClaimType"
+          },
+          "confidence_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence Note"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "materiality": {
+            "default": "material",
+            "enum": [
+              "material",
+              "supporting"
+            ],
+            "title": "Materiality",
+            "type": "string"
+          },
+          "produced_by": {
+            "title": "Produced By",
+            "type": "string"
+          },
+          "section": {
+            "$ref": "#/components/schemas/BriefSection"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "validation_notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Validation Notes",
+            "type": "array"
+          },
+          "validation_status": {
+            "$ref": "#/components/schemas/ValidationStatus",
+            "default": "unverified"
+          }
+        },
+        "required": [
+          "claim_id",
+          "section",
+          "text",
+          "claim_type",
+          "evidence_ids",
+          "materiality",
+          "validation_status",
+          "validation_notes",
+          "confidence_note",
+          "assumptions",
+          "produced_by"
+        ],
+        "title": "ResearchClaim",
+        "type": "object"
+      },
+      "ResearchRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "client_request_id": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{8,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
+          },
+          "focus_areas": {
+            "items": {
+              "$ref": "#/components/schemas/FocusArea"
+            },
+            "maxItems": 5,
+            "title": "Focus Areas",
+            "type": "array"
+          },
+          "question": {
+            "maxLength": 1000,
+            "minLength": 3,
+            "title": "Question",
+            "type": "string"
+          },
+          "requested_mode": {
+            "default": "configured",
+            "enum": [
+              "configured",
+              "fixture",
+              "live"
+            ],
+            "title": "Requested Mode",
+            "type": "string"
+          },
+          "symbol": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          },
+          "time_horizon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TimeHorizonInput"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "symbol",
+          "question"
+        ],
+        "title": "ResearchRequest",
+        "type": "object"
+      },
+      "ResearchRun": {
+        "additionalProperties": false,
+        "properties": {
+          "cancel_requested": {
+            "default": false,
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "company": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CompanyIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Ms"
+          },
+          "errors": {
+            "items": {
+              "$ref": "#/components/schemas/RunError"
+            },
+            "title": "Errors",
+            "type": "array"
+          },
+          "focus_areas": {
+            "items": {
+              "$ref": "#/components/schemas/FocusArea"
+            },
+            "title": "Focus Areas",
+            "type": "array"
+          },
+          "is_partial": {
+            "default": false,
+            "title": "Is Partial",
+            "type": "boolean"
+          },
+          "llm_mode": {
+            "title": "Llm Mode",
+            "type": "string"
+          },
+          "origin": {
+            "default": "text",
+            "enum": [
+              "text",
+              "voice",
+              "eval",
+              "rerun"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "parent_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Run Id"
+          },
+          "question": {
+            "title": "Question",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "stage": {
+            "$ref": "#/components/schemas/RunStage"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "time_horizon": {
+            "$ref": "#/components/schemas/TimeHorizon"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "symbol",
+          "company",
+          "question",
+          "time_horizon",
+          "focus_areas",
+          "status",
+          "stage",
+          "data_mode",
+          "llm_mode",
+          "origin",
+          "parent_run_id",
+          "created_at",
+          "updated_at",
+          "started_at",
+          "completed_at",
+          "is_partial",
+          "errors",
+          "cancel_requested",
+          "duration_ms"
+        ],
+        "title": "ResearchRun",
+        "type": "object"
+      },
+      "ResearchRunDetailResponse": {
+        "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "brief_payload_hash": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brief Payload Hash"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "poll_after_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Poll After Ms"
+          },
+          "run": {
+            "$ref": "#/components/schemas/ResearchRun"
+          },
+          "source_status": {
+            "items": {
+              "$ref": "#/components/schemas/DataSourceStatus"
+            },
+            "title": "Source Status",
+            "type": "array"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/AgentStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "tool_calls": {
+            "items": {
+              "$ref": "#/components/schemas/ToolCallRecord"
+            },
+            "title": "Tool Calls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run",
+          "steps",
+          "tool_calls",
+          "source_status",
+          "evidence",
+          "brief",
+          "brief_payload_hash",
+          "is_active",
+          "poll_after_ms"
+        ],
+        "title": "ResearchRunDetailResponse",
+        "type": "object"
+      },
+      "ReviewSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "claims_total": {
+            "title": "Claims Total",
+            "type": "integer"
+          },
+          "needs_qualification": {
+            "title": "Needs Qualification",
+            "type": "integer"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "numeric_checks_failed": {
+            "title": "Numeric Checks Failed",
+            "type": "integer"
+          },
+          "numeric_checks_passed": {
+            "title": "Numeric Checks Passed",
+            "type": "integer"
+          },
+          "reviewer": {
+            "title": "Reviewer",
+            "type": "string"
+          },
+          "supported": {
+            "title": "Supported",
+            "type": "integer"
+          },
+          "withheld": {
+            "title": "Withheld",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "reviewer",
+          "claims_total",
+          "supported",
+          "needs_qualification",
+          "withheld",
+          "numeric_checks_passed",
+          "numeric_checks_failed",
+          "notes"
+        ],
+        "title": "ReviewSummary",
+        "type": "object"
+      },
+      "RunAnalytics": {
+        "properties": {
+          "by_status": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "By Status",
+            "type": "object"
+          },
+          "completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Rate"
+          },
+          "finished": {
+            "title": "Finished",
+            "type": "integer"
+          },
+          "median_duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Duration Ms"
+          },
+          "p95_duration_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "P95 Duration Ms"
+          },
+          "partial_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partial Rate"
+          },
+          "started": {
+            "title": "Started",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "started",
+          "finished",
+          "by_status",
+          "completion_rate",
+          "partial_rate",
+          "median_duration_ms",
+          "p95_duration_ms"
+        ],
+        "title": "RunAnalytics",
+        "type": "object"
+      },
+      "RunError": {
+        "additionalProperties": false,
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchCategory"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "code": {
+            "$ref": "#/components/schemas/ErrorCode"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "retryable": {
+            "default": false,
+            "title": "Retryable",
+            "type": "boolean"
+          },
+          "step_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Key"
+          }
+        },
+        "required": [
+          "code",
+          "message",
+          "category",
+          "step_key",
+          "retryable"
+        ],
+        "title": "RunError",
+        "type": "object"
+      },
+      "RunListResponse": {
+        "properties": {
+          "runs": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchRun"
+            },
+            "title": "Runs",
+            "type": "array"
+          }
+        },
+        "required": [
+          "runs"
+        ],
+        "title": "RunListResponse",
+        "type": "object"
+      },
+      "RunStage": {
+        "enum": [
+          "created",
+          "validating",
+          "collecting_evidence",
+          "specialist_analysis",
+          "synthesizing",
+          "evidence_review",
+          "finalizing",
+          "done"
+        ],
+        "title": "RunStage",
+        "type": "string"
+      },
+      "RunStatus": {
+        "enum": [
+          "queued",
+          "running",
+          "partial",
+          "completed",
+          "failed",
+          "cancelled"
+        ],
+        "title": "RunStatus",
+        "type": "string"
+      },
+      "SavedBrief": {
+        "additionalProperties": false,
+        "properties": {
+          "brief": {
+            "$ref": "#/components/schemas/ResearchBrief"
+          },
+          "brief_id": {
+            "title": "Brief Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "evidence": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceItem"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "payload_hash": {
+            "title": "Payload Hash",
+            "type": "string"
+          },
+          "report_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brief_id",
+          "run_id",
+          "title",
+          "symbol",
+          "created_at",
+          "report_status",
+          "data_mode",
+          "is_fixture",
+          "payload_hash",
+          "brief",
+          "evidence"
+        ],
+        "title": "SavedBrief",
+        "type": "object"
+      },
+      "SavedBriefResponse": {
+        "properties": {
+          "saved": {
+            "$ref": "#/components/schemas/SavedBrief"
+          }
+        },
+        "required": [
+          "saved"
+        ],
+        "title": "SavedBriefResponse",
+        "type": "object"
+      },
+      "SavedBriefSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "brief_id": {
+            "title": "Brief Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "data_mode": {
+            "$ref": "#/components/schemas/DataMode"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "report_status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "brief_id",
+          "run_id",
+          "title",
+          "symbol",
+          "created_at",
+          "report_status",
+          "data_mode",
+          "is_fixture"
+        ],
+        "title": "SavedBriefSummary",
+        "type": "object"
+      },
+      "ServerStatusData": {
+        "additionalProperties": false,
+        "properties": {
+          "data_mode": {
+            "enum": [
+              "fixtures",
+              "live"
+            ],
+            "title": "Data Mode",
+            "type": "string"
+          },
+          "fixture_dataset_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fixture Dataset Version"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "reference_basis": {
+            "title": "Reference Basis",
+            "type": "string"
+          },
+          "reference_time": {
+            "format": "date-time",
+            "title": "Reference Time",
+            "type": "string"
+          },
+          "server": {
+            "title": "Server",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/SourceStatusEntry"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "server",
+          "data_mode",
+          "is_fixture",
+          "fixture_dataset_version",
+          "reference_time",
+          "reference_basis",
+          "sources",
+          "warnings"
+        ],
+        "title": "ServerStatusData",
+        "type": "object"
+      },
+      "SourceMode": {
+        "enum": [
+          "live",
+          "fixture"
+        ],
+        "title": "SourceMode",
+        "type": "string"
+      },
+      "SourceRef": {
+        "additionalProperties": false,
+        "properties": {
+          "evidence_id": {
+            "title": "Evidence Id",
+            "type": "string"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/EvidenceKind"
+          },
+          "period_end": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period End"
+          },
+          "period_start": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period Start"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At"
+          },
+          "retrieved_at": {
+            "format": "date-time",
+            "title": "Retrieved At",
+            "type": "string"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "evidence_id",
+          "kind",
+          "title",
+          "source_name",
+          "source_url",
+          "published_at",
+          "period_start",
+          "period_end",
+          "retrieved_at",
+          "is_fixture",
+          "source_mode",
+          "flags"
+        ],
+        "title": "SourceRef",
+        "type": "object"
+      },
+      "SourceStatusEntry": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "$ref": "#/components/schemas/CapabilityStatus"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          },
+          "last_error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "last_successful_retrieval": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Successful Retrieval"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "rate_limited": {
+            "default": false,
+            "title": "Rate Limited",
+            "type": "boolean"
+          },
+          "retry_after_seconds": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After Seconds"
+          },
+          "source_mode": {
+            "$ref": "#/components/schemas/SourceMode"
+          }
+        },
+        "required": [
+          "provider",
+          "configured",
+          "source_mode",
+          "capabilities",
+          "last_successful_retrieval",
+          "last_error_code",
+          "rate_limited",
+          "retry_after_seconds",
+          "limitations"
+        ],
+        "title": "SourceStatusEntry",
+        "type": "object"
+      },
+      "StepStatus": {
+        "enum": [
+          "pending",
+          "running",
+          "completed",
+          "failed",
+          "skipped",
+          "cancelled"
+        ],
+        "title": "StepStatus",
+        "type": "string"
+      },
+      "SymbolMatch": {
+        "additionalProperties": false,
+        "properties": {
+          "company_name": {
+            "title": "Company Name",
+            "type": "string"
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exchange"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "company_name",
+          "exchange"
+        ],
+        "title": "SymbolMatch",
+        "type": "object"
+      },
+      "SymbolSearchResponse": {
+        "description": "Ticker suggestions for the research bar (symbol or company-name prefix, covered symbols only).",
+        "properties": {
+          "is_fixture": {
+            "title": "Is Fixture",
+            "type": "boolean"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/SymbolMatch"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          }
+        },
+        "required": [
+          "query",
+          "matches",
+          "is_fixture"
+        ],
+        "title": "SymbolSearchResponse",
+        "type": "object"
+      },
+      "TimeHorizon": {
+        "additionalProperties": false,
+        "properties": {
+          "basis": {
+            "title": "Basis",
+            "type": "string"
+          },
+          "end_date": {
+            "format": "date",
+            "title": "End Date",
+            "type": "string"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "reference_date": {
+            "format": "date",
+            "title": "Reference Date",
+            "type": "string"
+          },
+          "start_date": {
+            "format": "date",
+            "title": "Start Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start_date",
+          "end_date",
+          "label",
+          "is_default",
+          "reference_date",
+          "basis"
+        ],
+        "title": "TimeHorizon",
+        "type": "object"
+      },
+      "TimeHorizonInput": {
+        "additionalProperties": false,
+        "properties": {
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "preset": {
+            "anyOf": [
+              {
+                "enum": [
+                  "1m",
+                  "3m",
+                  "6m",
+                  "1y"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preset"
+          },
+          "start_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Date"
+          }
+        },
+        "title": "TimeHorizonInput",
+        "type": "object"
+      },
+      "ToolCallRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "call_id": {
+            "title": "Call Id",
+            "type": "string"
+          },
+          "ended_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ended At"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ErrorCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "input_summary": {
+            "additionalProperties": true,
+            "title": "Input Summary",
+            "type": "object"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "output_summary": {
+            "additionalProperties": true,
+            "title": "Output Summary",
+            "type": "object"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "seq": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seq"
+          },
+          "server_id": {
+            "title": "Server Id",
+            "type": "string"
+          },
+          "started_at": {
+            "format": "date-time",
+            "title": "Started At",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_name": {
+            "title": "Tool Name",
+            "type": "string"
+          },
+          "transport": {
+            "enum": [
+              "mcp_stdio",
+              "in_process"
+            ],
+            "title": "Transport",
+            "type": "string"
+          }
+        },
+        "required": [
+          "call_id",
+          "run_id",
+          "seq",
+          "server_id",
+          "tool_name",
+          "transport",
+          "input_summary",
+          "status",
+          "error_code",
+          "latency_ms",
+          "output_summary",
+          "started_at",
+          "ended_at",
+          "idempotency_key"
+        ],
+        "title": "ToolCallRecord",
+        "type": "object"
+      },
+      "ValidationError": {
+        "properties": {
+          "ctx": {
+            "title": "Context",
+            "type": "object"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "title": "Location",
+            "type": "array"
+          },
+          "msg": {
+            "title": "Message",
+            "type": "string"
+          },
+          "type": {
+            "title": "Error Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError",
+        "type": "object"
+      },
+      "ValidationStatus": {
+        "enum": [
+          "supported",
+          "needs_qualification",
+          "unsupported",
+          "date_mismatch",
+          "numeric_mismatch",
+          "contradicted",
+          "unverified"
+        ],
+        "title": "ValidationStatus",
+        "type": "string"
+      },
+      "VoiceAnalytics": {
+        "properties": {
+          "connections_failed": {
+            "title": "Connections Failed",
+            "type": "integer"
+          },
+          "connections_succeeded": {
+            "title": "Connections Succeeded",
+            "type": "integer"
+          },
+          "failure_reasons": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Failure Reasons",
+            "type": "object"
+          },
+          "sessions_created": {
+            "title": "Sessions Created",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sessions_created",
+          "connections_succeeded",
+          "connections_failed",
+          "failure_reasons"
+        ],
+        "title": "VoiceAnalytics",
+        "type": "object"
+      },
+      "VoiceSessionResponse": {
+        "description": "Connection details for one voice session (token is room-scoped and short-lived).",
+        "properties": {
+          "agent_name": {
+            "title": "Agent Name",
+            "type": "string"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "participant_identity": {
+            "title": "Participant Identity",
+            "type": "string"
+          },
+          "participant_token": {
+            "title": "Participant Token",
+            "type": "string"
+          },
+          "room_name": {
+            "title": "Room Name",
+            "type": "string"
+          },
+          "server_url": {
+            "title": "Server Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "server_url",
+          "room_name",
+          "participant_identity",
+          "participant_token",
+          "expires_at",
+          "agent_name"
+        ],
+        "title": "VoiceSessionResponse",
+        "type": "object"
+      },
+      "VoiceSessionState": {
+        "properties": {
+          "active_run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Id"
+          },
+          "active_run_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active Run Status"
+          },
+          "ended": {
+            "title": "Ended",
+            "type": "boolean"
+          },
+          "expires_at": {
+            "format": "date-time",
+            "title": "Expires At",
+            "type": "string"
+          },
+          "room_name": {
+            "title": "Room Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "room_name",
+          "expires_at",
+          "ended",
+          "active_run_id",
+          "active_run_status"
+        ],
+        "title": "VoiceSessionState",
+        "type": "object"
+      },
+      "WatchlistItem": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "last_research_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Research At"
+          },
+          "origin": {
+            "title": "Origin",
+            "type": "string"
+          },
+          "symbol": {
+            "title": "Symbol",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol",
+          "display_name",
+          "origin",
+          "created_at",
+          "updated_at",
+          "last_research_at"
+        ],
+        "title": "WatchlistItem",
+        "type": "object"
+      },
+      "WatchlistProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "symbol": {
+            "maxLength": 16,
+            "minLength": 1,
+            "title": "Symbol",
+            "type": "string"
+          }
+        },
+        "required": [
+          "symbol"
+        ],
+        "title": "WatchlistProposalRequest",
+        "type": "object"
+      },
+      "WatchlistResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WatchlistItem"
+            },
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "title": "WatchlistResponse",
+        "type": "object"
+      },
+      "WorkspaceAnalytics": {
+        "properties": {
+          "briefs_saved": {
+            "title": "Briefs Saved",
+            "type": "integer"
+          },
+          "watchlist_changes": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Watchlist Changes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "briefs_saved",
+          "watchlist_changes"
+        ],
+        "title": "WorkspaceAnalytics",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Evidence-grounded equity research API. Research only: no trading, no brokerage access, no personalized recommendations.",
+    "title": "MarketLens API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/actions": {
+      "post": {
+        "operationId": "propose_action_api_actions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposeActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Propose Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}": {
+      "get": {
+        "operationId": "get_action_api_actions__action_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}/cancel": {
+      "post": {
+        "operationId": "cancel_action_api_actions__action_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Cancel Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}/confirm": {
+      "post": {
+        "operationId": "confirm_action_api_actions__action_id__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "410": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Gone"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Confirm Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/analytics/events": {
+      "post": {
+        "description": "Record an allowlisted browser event (voice connection outcome only).",
+        "operationId": "record_event_api_analytics_events_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnalyticsEventRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Record Event",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/analytics/summary": {
+      "get": {
+        "description": "Counts and rates stored in the local database; no personal data, free text or secrets.",
+        "operationId": "summary_api_analytics_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Summary",
+        "tags": [
+          "analytics"
+        ]
+      }
+    },
+    "/api/briefs": {
+      "get": {
+        "operationId": "list_briefs_api_briefs_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BriefListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "List Briefs",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/briefs/{brief_id}": {
+      "get": {
+        "operationId": "get_brief_api_briefs__brief_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "brief_id",
+            "required": true,
+            "schema": {
+              "title": "Brief Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedBriefResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Brief",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/compare": {
+      "post": {
+        "description": "Percentage change for two periods, with the first and last trading days actually used.",
+        "operationId": "compare_api_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ComparePeriodsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparePeriodsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        },
+        "summary": "Compare",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/data-status": {
+      "get": {
+        "operationId": "data_status_api_data_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Data Status",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/health": {
+      "get": {
+        "operationId": "health_api_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Health",
+        "tags": [
+          "health"
+        ]
+      }
+    },
+    "/api/research": {
+      "get": {
+        "operationId": "list_research_api_research_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "symbol",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 16,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Symbol"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Research",
+        "tags": [
+          "research"
+        ]
+      },
+      "post": {
+        "description": "Validate the request synchronously, then run the research workflow in the background.",
+        "operationId": "create_research_api_research_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResearchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateResearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Create Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{run_id}": {
+      "get": {
+        "operationId": "get_research_api_research__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchRunDetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_research_api_research__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Cancel Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/research/{run_id}/rerun": {
+      "post": {
+        "description": "Run the same research again as a new run; the original run and any saved brief are unchanged.\n\nSame symbol, question and focus areas. A default window stays the default (resolved against\nthe current reference date); an explicit window is reused exactly.",
+        "operationId": "rerun_research_api_research__run_id__rerun_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateResearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Rerun Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/symbols": {
+      "get": {
+        "description": "Suggestions only: research still resolves the exact ticker the user picks (D-15, D-82).",
+        "operationId": "search_symbols_api_symbols_get",
+        "parameters": [
+          {
+            "description": "Start of a ticker or of a word in the company name; empty lists the largest covered companies.",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "description": "Start of a ticker or of a word in the company name; empty lists the largest covered companies.",
+              "maxLength": 40,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 8,
+              "maximum": 20,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SymbolSearchResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Search Symbols",
+        "tags": [
+          "research"
+        ]
+      }
+    },
+    "/api/voice/session": {
+      "post": {
+        "description": "Create a voice room for this browser session and return a short-lived, room-scoped token.",
+        "operationId": "create_voice_session_api_voice_session_post",
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSessionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Create Voice Session",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/api/voice/session/{room_name}": {
+      "get": {
+        "operationId": "get_voice_session_api_voice_session__room_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_name",
+            "required": true,
+            "schema": {
+              "title": "Room Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSessionState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "Get Voice Session",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/api/voice/session/{room_name}/end": {
+      "post": {
+        "operationId": "end_voice_session_api_voice_session__room_name__end_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "room_name",
+            "required": true,
+            "schema": {
+              "title": "Room Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VoiceSessionState"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          },
+          "429": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Too Many Requests"
+          }
+        },
+        "summary": "End Voice Session",
+        "tags": [
+          "voice"
+        ]
+      }
+    },
+    "/api/watchlist": {
+      "get": {
+        "operationId": "get_watchlist_api_watchlist_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WatchlistResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Get Watchlist",
+        "tags": [
+          "workspace"
+        ]
+      },
+      "post": {
+        "description": "Creates a pending add; nothing changes until the user confirms it.",
+        "operationId": "propose_watchlist_add_api_watchlist_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatchlistProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Propose Watchlist Add",
+        "tags": [
+          "workspace"
+        ]
+      }
+    },
+    "/api/watchlist/{symbol}": {
+      "delete": {
+        "description": "Creates a pending removal; nothing changes until the user confirms it.",
+        "operationId": "propose_watchlist_remove_api_watchlist__symbol__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "symbol",
+            "required": true,
+            "schema": {
+              "title": "Symbol",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingActionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Propose Watchlist Remove",
+        "tags": [
+          "workspace"
+        ]
+      }
+    }
+  }
+}

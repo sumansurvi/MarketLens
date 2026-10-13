@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+/*
+ * MarketLens design tokens. Calm neutral surfaces with one accent; the chart chrome
+ * and series colors follow the validated data-viz reference palette (light + dark
+ * steps chosen separately, not auto-inverted). Status colors always ship with an
+ * icon and a text label.
+ */
+:root {
+  color-scheme: light;
+  --plane: #f9f9f7;
+  --surface: #fcfcfb;
+  --surface-raised: #ffffff;
+  --surface-sunken: #f1f0ec;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #6b6a65;
+  --hairline: #e1e0d9;
+  --baseline: #c3c2b7;
+  --border: rgba(11, 11, 11, 0.1);
+  --accent: #256abf;
+  --accent-wash: #e8f0fb;
+  --series-1: #2a78d6;
+  --series-decline: #e34948;
+  --good: #0ca30c;
+  --good-text: #006300;
+  --warning: #fab219;
+  --warning-text: #6f4b00;
+  --serious: #ec835a;
+  --critical: #d03b3b;
+  --critical-text: #a32020;
+  --demo-bg: #fff4d6;
+  --demo-border: #e0a200;
+  --demo-text: #3d2c00;
+  --focus: #256abf;
+}
+
+/* Dark on screen only: a printed or saved PDF brief always uses the light palette (D-91). */
+@media screen and (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --plane: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-raised: #222220;
+    --surface-sunken: #141413;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-3: #a3a29a;
+    --hairline: #2c2c2a;
+    --baseline: #383835;
+    --border: rgba(255, 255, 255, 0.1);
+    --accent: #6da7ec;
+    --accent-wash: #162538;
+    --series-1: #3987e5;
+    --series-decline: #e66767;
+    --good-text: #0ca30c;
+    --warning-text: #fab219;
+    --critical-text: #f08a8a;
+    --demo-bg: #2b2205;
+    --demo-border: #c98500;
+    --demo-text: #ffe2a3;
+    --focus: #6da7ec;
+  }
+}
+
+@theme inline {
+  --color-plane: var(--plane);
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-sunken: var(--surface-sunken);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-hairline: var(--hairline);
+  --color-baseline: var(--baseline);
+  --color-line: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-wash: var(--accent-wash);
+  --color-good: var(--good);
+  --color-good-text: var(--good-text);
+  --color-warning: var(--warning);
+  --color-warning-text: var(--warning-text);
+  --color-serious: var(--serious);
+  --color-critical: var(--critical);
+  --color-critical-text: var(--critical-text);
+  --color-demo-bg: var(--demo-bg);
+  --color-demo-border: var(--demo-border);
+  --color-demo-text: var(--demo-text);
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: var(--plane);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* PDF / print (D-91): only the brief, on white, with its tinted sections kept. */
+@page {
+  margin: 14mm 12mm;
+}
+@media print {
+  html,
+  body {
+    height: auto !important;
+    background: #ffffff !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+}

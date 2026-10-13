@@ -1,0 +1,31 @@
+# Optional: run MarketLens in Docker when Node, pnpm or uv are not installed locally (`make start MODE=docker`).
+# Defaults are the offline demo (fixture data, fixture LLM, voice disabled); a git-ignored .env is read if present.
+services:
+  marketlens:
+    build: .
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Reached through the published port, so the browser origin is the host port.
+      FRONTEND_ORIGIN: "http://localhost:${WEB_PORT:-3000}"
+    volumes:
+      - .:/app
+      # Keep Linux dependencies out of the host checkout (and the host's macOS binaries out of the container).
+      - venv:/app/.venv
+      - node_modules:/app/node_modules
+      - web_node_modules:/app/apps/web/node_modules
+      - web_next:/app/apps/web/.next
+    command: >
+      sh -c "pnpm install --frozen-lockfile
+      && uv sync --frozen
+      && uv run python scripts/seed_demo.py
+      && uv run python scripts/dev.py --api-port 8000 --web-port 3000"
+volumes:
+  venv:
+  node_modules:
+  web_node_modules:
+  web_next:

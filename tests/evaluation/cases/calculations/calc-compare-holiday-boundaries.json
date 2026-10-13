@@ -1,0 +1,22 @@
+{
+  "case_id": "calc-compare-holiday-boundaries",
+  "category": "calculations",
+  "description": "Periods starting on the Jul 3 holiday and on a Saturday use the next trading days; requested and used dates are both reported.",
+  "kind": "compare",
+  "request": {
+    "symbol": "NVDA",
+    "periods": [
+      {
+        "start_date": "2026-07-03",
+        "end_date": "2026-08-07"
+      },
+      {
+        "start_date": "2026-08-15",
+        "end_date": "2026-09-30"
+      }
+    ]
+  },
+  "expect": {
+    "difference_computed": true
+  }
+}

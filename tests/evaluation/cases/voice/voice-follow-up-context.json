@@ -1,0 +1,55 @@
+{
+  "case_id": "voice-follow-up-context",
+  "category": "voice",
+  "kind": "steps",
+  "settings": {
+    "voice_mode": "livekit"
+  },
+  "description": "A voice follow-up without a run id resolves to the run started in that voice session; summaries come from validated claims.",
+  "steps": [
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room": "room_name"
+      }
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/research",
+      "client": "worker",
+      "json": {
+        "symbol": "AAPL",
+        "question": "How has Apple done?"
+      },
+      "expect_status": 202,
+      "save": {
+        "run": "run_id"
+      }
+    },
+    {
+      "wait_run": "{run}",
+      "expect_status": [
+        "completed"
+      ]
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room}/summary?focus=risks",
+      "client": "worker",
+      "expect_status": 200,
+      "expect_json": {
+        "run_id": "{run}",
+        "status": "completed"
+      },
+      "expect_contains": {
+        "sentences": "Risk factor quoted"
+      }
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room}/status",
+      "client": "worker",
+      "expect_json": {
+        "is_terminal": true
+      }
+    }
+  ]
+}

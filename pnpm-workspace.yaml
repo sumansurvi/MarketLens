@@ -1,0 +1,8 @@
+packages:
+  - apps/*
+
+# pnpm blocks dependency build scripts unless explicitly allowed.
+# Both are optional native helpers that work from prebuilt binaries.
+allowBuilds:
+  sharp: false
+  unrs-resolver: false

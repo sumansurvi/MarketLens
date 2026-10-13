@@ -1,0 +1,40 @@
+{
+  "case_id": "tool-not-allowlisted",
+  "category": "tool_schema",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "Tool names outside the allowlist (including trading-like names) are refused without a call.",
+  "steps": [
+    {
+      "mcp": [
+        "market_data",
+        "place_order",
+        {
+          "symbol": "AAPL",
+          "quantity": 100
+        }
+      ],
+      "expect_code": "MCP_TOOL_NOT_ALLOWED"
+    },
+    {
+      "mcp": [
+        "research_workspace",
+        "get_quote",
+        {
+          "symbol": "AAPL"
+        }
+      ],
+      "expect_code": "MCP_TOOL_NOT_ALLOWED"
+    },
+    {
+      "mcp": [
+        "shell",
+        "exec",
+        {
+          "cmd": "ls"
+        }
+      ],
+      "expect_code": "MCP_TOOL_NOT_ALLOWED"
+    }
+  ]
+}

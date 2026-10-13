@@ -1,0 +1,37 @@
+{
+  "case_id": "calc-missing-bar-not-single-day",
+  "category": "calculations",
+  "description": "A missing trading-day bar (2026-08-13): no move spanning it is called single-day, the gap is disclosed and the report is partial.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple over the window."
+  },
+  "overlays": {
+    "alpha_vantage/TIME_SERIES_DAILY/AAPL.json": {
+      "delete": [
+        [
+          "Time Series (Daily)",
+          "2026-08-13"
+        ]
+      ]
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "categories": {
+      "market": "partial"
+    },
+    "gap_text_includes": [
+      "2026-08-13"
+    ],
+    "claims_include": [
+      "Among trading days with consecutive daily data"
+    ],
+    "prohibited_text": [
+      "close moved from $210.83 on 2026-08-12 to $202.80"
+    ]
+  }
+}

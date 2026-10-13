@@ -1,0 +1,15 @@
+# Production-style image for the MarketLens backend (FastAPI + the three MCP servers, which it spawns over stdio).
+# Deploy it on any container host (Render, Fly.io, Railway, Cloud Run, a VM) and point Vercel's BACKEND_URL at it.
+FROM python:3.13-slim-bookworm
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+ENV UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY pyproject.toml uv.lock .python-version ./
+COPY services ./services
+COPY data/fixtures ./data/fixtures
+RUN uv sync --frozen --no-dev --no-install-project
+ENV PATH="/app/.venv/bin:$PATH" DATABASE_URL=sqlite:////data/marketlens.db
+VOLUME /data
+EXPOSE 8000
+# The platform terminates HTTPS; bind all interfaces inside the container (MarketLens warns about non-loopback hosts).
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]

@@ -1,0 +1,14 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:TIME_SERIES_DAILY_ADJUSTED",
+    "fault": {
+      "type": "capability_unavailable",
+      "message": "Simulated plan limitation: this endpoint is premium-only on the configured plan."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "case_id": "coverage-six-month-window",
+  "category": "missing_stale",
+  "description": "A 6-month window exceeds the provider's ~100-day coverage: actual covered dates are stated and the report is partial.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Six month view please.",
+    "time_horizon": {
+      "preset": "6m"
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "categories": {
+      "market": "partial"
+    },
+    "gap_text_includes": [
+      "Provider data begins 2026-05-08"
+    ],
+    "claims_include": [
+      "within the requested window 2026-03-30 to 2026-09-30"
+    ]
+  }
+}

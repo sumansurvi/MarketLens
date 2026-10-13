@@ -1,0 +1,172 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:NEWS_SENTIMENT"
+  },
+  "items": "5",
+  "sentiment_score_definition": "Synthetic fixture: sentiment fields are illustrative placeholders.",
+  "relevance_score_definition": "Synthetic fixture: relevance fields are illustrative placeholders.",
+  "feed": [
+    {
+      "title": "Illustrative: Supply chain commentary notes advanced packaging constraints",
+      "url": "https://example.com/marketlens-fixture/news/nvda-2026-09-18-packaging-constraints",
+      "time_published": "20260918T130000",
+      "authors": [
+        "Synthetic Desk"
+      ],
+      "summary": "Synthetic supply-chain commentary notes tight advanced packaging capacity across the industry.",
+      "banner_image": null,
+      "source": "MarketLens Synthetic Newswire",
+      "category_within_source": "Synthetic",
+      "source_domain": "example.com",
+      "topics": [
+        {
+          "topic": "Manufacturing",
+          "relevance_score": "0.500000"
+        },
+        {
+          "topic": "Technology",
+          "relevance_score": "0.500000"
+        }
+      ],
+      "overall_sentiment_score": "0.000000",
+      "overall_sentiment_label": "Somewhat-Bearish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.719904",
+          "ticker_sentiment_score": "0.000000",
+          "ticker_sentiment_label": "Somewhat-Bearish"
+        }
+      ]
+    },
+    {
+      "title": "Illustrative: Competitors preview next-generation AI accelerators",
+      "url": "https://example.com/marketlens-fixture/news/nvda-2026-09-10-competitor-previews",
+      "time_published": "20260910T100000",
+      "authors": [
+        "Synthetic Desk"
+      ],
+      "summary": "Synthetic coverage of competitor product previews in AI accelerators.",
+      "banner_image": null,
+      "source": "MarketLens Synthetic Newswire",
+      "category_within_source": "Synthetic",
+      "source_domain": "example.com",
+      "topics": [
+        {
+          "topic": "Technology",
+          "relevance_score": "0.500000"
+        }
+      ],
+      "overall_sentiment_score": "0.000000",
+      "overall_sentiment_label": "Somewhat-Bearish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.655802",
+          "ticker_sentiment_score": "0.000000",
+          "ticker_sentiment_label": "Somewhat-Bearish"
+        }
+      ]
+    },
+    {
+      "title": "Illustrative: NVIDIA quarterly results cite data-center demand",
+      "url": "https://example.com/marketlens-fixture/news/nvda-2026-08-26-quarterly-results",
+      "time_published": "20260826T201500",
+      "authors": [
+        "Synthetic Desk"
+      ],
+      "summary": "Synthetic results recap published after the market close; it describes data-center demand and supply commentary without citing guidance figures.",
+      "banner_image": null,
+      "source": "MarketLens Synthetic Newswire",
+      "category_within_source": "Synthetic",
+      "source_domain": "example.com",
+      "topics": [
+        {
+          "topic": "Earnings",
+          "relevance_score": "0.500000"
+        },
+        {
+          "topic": "Technology",
+          "relevance_score": "0.500000"
+        }
+      ],
+      "overall_sentiment_score": "0.000000",
+      "overall_sentiment_label": "Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.967512",
+          "ticker_sentiment_score": "0.000000",
+          "ticker_sentiment_label": "Bullish"
+        }
+      ]
+    },
+    {
+      "title": "Illustrative: New export licensing rules under discussion for advanced accelerators",
+      "url": "https://example.com/marketlens-fixture/news/nvda-2026-08-05-export-licensing",
+      "time_published": "20260805T140000",
+      "authors": [
+        "Synthetic Desk"
+      ],
+      "summary": "Synthetic report that policymakers are discussing new licensing rules for advanced AI accelerators; timing and scope are unclear.",
+      "banner_image": null,
+      "source": "MarketLens Synthetic Newswire",
+      "category_within_source": "Synthetic",
+      "source_domain": "example.com",
+      "topics": [
+        {
+          "topic": "Technology",
+          "relevance_score": "0.500000"
+        },
+        {
+          "topic": "Economy - Fiscal",
+          "relevance_score": "0.500000"
+        }
+      ],
+      "overall_sentiment_score": "0.000000",
+      "overall_sentiment_label": "Somewhat-Bearish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.844019",
+          "ticker_sentiment_score": "0.000000",
+          "ticker_sentiment_label": "Somewhat-Bearish"
+        }
+      ]
+    },
+    {
+      "title": "Illustrative: Cloud providers signal continued data-center capital spending",
+      "url": "https://example.com/marketlens-fixture/news/nvda-2026-07-15-capex-signals",
+      "time_published": "20260715T120000",
+      "authors": [
+        "Synthetic Desk"
+      ],
+      "summary": "Synthetic roundup of cloud-provider commentary indicating continued data-center capital spending plans; no company-specific figures.",
+      "banner_image": null,
+      "source": "MarketLens Synthetic Newswire",
+      "category_within_source": "Synthetic",
+      "source_domain": "example.com",
+      "topics": [
+        {
+          "topic": "Technology",
+          "relevance_score": "0.500000"
+        }
+      ],
+      "overall_sentiment_score": "0.000000",
+      "overall_sentiment_label": "Somewhat-Bullish",
+      "ticker_sentiment": [
+        {
+          "ticker": "NVDA",
+          "relevance_score": "0.702300",
+          "ticker_sentiment_score": "0.000000",
+          "ticker_sentiment_label": "Somewhat-Bullish"
+        }
+      ]
+    }
+  ]
+}

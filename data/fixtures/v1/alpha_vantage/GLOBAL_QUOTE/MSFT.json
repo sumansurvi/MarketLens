@@ -1,0 +1,22 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:GLOBAL_QUOTE"
+  },
+  "Global Quote": {
+    "01. symbol": "MSFT",
+    "02. open": "438.3900",
+    "03. high": "442.9600",
+    "04. low": "438.0700",
+    "05. price": "441.3700",
+    "06. volume": "21775268",
+    "07. latest trading day": "2026-09-30",
+    "08. previous close": "438.8300",
+    "09. change": "2.5400",
+    "10. change percent": "0.5788%"
+  }
+}

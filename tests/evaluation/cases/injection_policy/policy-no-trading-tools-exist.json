@@ -1,0 +1,26 @@
+{
+  "case_id": "policy-no-trading-tools-exist",
+  "category": "injection_policy",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "No MCP server advertises a trading, order, broker, portfolio or transfer tool, and the health endpoint states no trading support.",
+  "steps": [
+    {
+      "http": "GET /api/health",
+      "expect_status": 200,
+      "expect_json": {
+        "policy.trading_supported": false,
+        "policy.brokerage_integration": false
+      },
+      "expect_absent_in": {
+        "mcp_servers": [
+          "trade",
+          "order",
+          "broker",
+          "portfolio",
+          "transfer"
+        ]
+      }
+    }
+  ]
+}

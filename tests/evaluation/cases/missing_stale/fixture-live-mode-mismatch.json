@@ -1,0 +1,15 @@
+{
+  "case_id": "fixture-live-mode-mismatch",
+  "category": "missing_stale",
+  "description": "A request for live data while fixtures are configured is refused (MODE_MISMATCH); nothing is substituted silently.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple with live data.",
+    "requested_mode": "live"
+  },
+  "expect": {
+    "http_status": 409,
+    "error_code": "MODE_MISMATCH"
+  }
+}

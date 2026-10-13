@@ -1,0 +1,27 @@
+{
+  "case_id": "normal-nvda-why-move-causality",
+  "category": "normal_research",
+  "description": "\"Why did the stock move?\" produces a dated timeline with cautious causality, never a causal claim.",
+  "kind": "research",
+  "request": {
+    "symbol": "NVDA",
+    "question": "Why did Nvidia stock move recently?"
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "gap_reason_codes_include": [
+      "CAUSATION_UNKNOWN"
+    ],
+    "prohibited_text": [
+      "because of the",
+      "drove the",
+      "sent shares",
+      "triggered the"
+    ],
+    "claims_include": [
+      "does not establish"
+    ]
+  }
+}

@@ -1,0 +1,39 @@
+# MarketLens voice worker (optional). A separate uv project, not a member of the root
+# workspace: it talks to the backend only over the authenticated internal voice API.
+[project]
+name = "marketlens-voice-agent"
+version = "0.1.0"
+description = "LiveKit voice agent for MarketLens: narrow research tools over the shared workflow."
+requires-python = ">=3.11,<3.15"
+dependencies = [
+  "marketlens-core",
+  "livekit-agents>=1.8.3,<1.9",
+  "httpx>=0.28,<1",
+]
+
+[tool.uv.sources]
+# Shared configuration and policy text (one source of truth); no backend code is imported.
+marketlens-core = { path = "../core", editable = true }
+
+[project.scripts]
+marketlens-voice-agent = "marketlens_voice.__main__:main"
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.9,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
+module-name = "marketlens_voice"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = [
+  "live: requires LiveKit credentials; skipped unless MARKETLENS_LIVE_TESTS=1",
+]

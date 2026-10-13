@@ -1,0 +1,22 @@
+{
+  "case_id": "calc-compare-window-halves",
+  "category": "calculations",
+  "description": "Compare two periods: dates actually used, percentage changes and the difference all match raw fixture closes.",
+  "kind": "compare",
+  "request": {
+    "symbol": "AAPL",
+    "periods": [
+      {
+        "start_date": "2026-06-30",
+        "end_date": "2026-08-14"
+      },
+      {
+        "start_date": "2026-08-14",
+        "end_date": "2026-09-30"
+      }
+    ]
+  },
+  "expect": {
+    "difference_computed": true
+  }
+}

@@ -1,0 +1,113 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:EARNINGS"
+  },
+  "symbol": "NVDA",
+  "annualEarnings": [
+    {
+      "fiscalDateEnding": "2026-01-25",
+      "reportedEPS": "3.21"
+    },
+    {
+      "fiscalDateEnding": "2025-01-26",
+      "reportedEPS": "2.41"
+    }
+  ],
+  "quarterlyEarnings": [
+    {
+      "fiscalDateEnding": "2026-07-26",
+      "reportedDate": "2026-08-26",
+      "reportedEPS": "1.02",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2026-04-26",
+      "reportedDate": "2026-05-27",
+      "reportedEPS": "0.98",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2026-01-25",
+      "reportedDate": "2026-02-25",
+      "reportedEPS": "0.89",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-10-26",
+      "reportedDate": "2025-11-19",
+      "reportedEPS": "0.85",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-07-27",
+      "reportedDate": "2025-08-27",
+      "reportedEPS": "0.76",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-04-27",
+      "reportedDate": "2025-05-28",
+      "reportedEPS": "0.71",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-01-26",
+      "reportedDate": "2025-02-26",
+      "reportedEPS": "0.67",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-10-27",
+      "reportedDate": "2024-11-20",
+      "reportedEPS": "0.62",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-07-28",
+      "reportedDate": "2024-08-28",
+      "reportedEPS": "0.58",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-04-28",
+      "reportedDate": "2024-05-29",
+      "reportedEPS": "0.54",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    }
+  ]
+}

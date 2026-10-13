@@ -1,0 +1,60 @@
+{
+  "case_id": "tool-invalid-enum-and-types",
+  "category": "tool_schema",
+  "kind": "steps",
+  "description": "Invalid enum values and wrong argument types are blocked by schema validation before reaching the MCP server.",
+  "steps": [
+    {
+      "mcp": [
+        "research_sources",
+        "search_company_filings",
+        {
+          "symbol": "AAPL",
+          "forms": [
+            "10-X"
+          ]
+        }
+      ],
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "mcp": [
+        "market_data",
+        "get_historical_prices",
+        {
+          "symbol": "AAPL",
+          "start_date": 20260101,
+          "end_date": "2026-09-30"
+        }
+      ],
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "mcp": [
+        "market_data",
+        "get_quote",
+        {
+          "symbol": 5
+        }
+      ],
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "mcp": [
+        "market_data",
+        "get_quote",
+        {}
+      ],
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "mcp": [
+        "market_data",
+        "get_quote",
+        {
+          "symbol": "AAPL"
+        }
+      ]
+    }
+  ]
+}

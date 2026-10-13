@@ -1,0 +1,103 @@
+{
+  "dataset_version": "fx-2026-09-30-v1",
+  "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+  "as_of": "2026-09-30T20:00:00Z",
+  "reference_date": "2026-09-30",
+  "fixture_url_base": "https://example.com/marketlens-fixture",
+  "generator": "scripts/generate_fixtures.py",
+  "notes": [
+    "Company names, tickers and CIKs are public identifiers used for recognizability only.",
+    "Prices, financial values, filings, headlines and documents are synthetic and illustrative.",
+    "URLs use example.com (reserved for documentation) and do not point to real documents.",
+    "Daily bars skip weekends and the 2026 NYSE holidays in the window (May 25, Jun 19, Jul 3, Sep 7).",
+    "Adjusted daily series and MSFT news simulate plan limitations (capability unavailable)."
+  ],
+  "symbols": [
+    {
+      "symbol": "AAPL",
+      "company_name": "Apple Inc.",
+      "cik": "0000320193",
+      "exchange": "Nasdaq",
+      "scenarios": [
+        "complete_data",
+        "news_item_with_prompt_injection",
+        "notable_decline_coincides_with_dated_news"
+      ]
+    },
+    {
+      "symbol": "MSFT",
+      "company_name": "Microsoft Corporation",
+      "cik": "0000789019",
+      "exchange": "Nasdaq",
+      "scenarios": [
+        "news_capability_unavailable"
+      ]
+    },
+    {
+      "symbol": "NVDA",
+      "company_name": "NVIDIA Corporation",
+      "cik": "0001045810",
+      "exchange": "Nasdaq",
+      "scenarios": [
+        "issuer_specific_revenue_concept",
+        "move_on_trading_day_after_dated_news"
+      ]
+    }
+  ],
+  "files": {
+    "alpha_vantage/EARNINGS/AAPL.json": "sha256:25afe951713132548f53a971a5a2d5d59de64cf750c58e0d5f7fb1ebdcb31bcd",
+    "alpha_vantage/EARNINGS/MSFT.json": "sha256:5db39ecf44886d892e415d70fa223f12615ed94d581c58e9bbaa7f410df2ec22",
+    "alpha_vantage/EARNINGS/NVDA.json": "sha256:b513d6c41483f0f8c8d18f61c17e08cf51b3125b69cd36854343d8d31c7ff4c5",
+    "alpha_vantage/GLOBAL_QUOTE/AAPL.json": "sha256:1e73e5d01d15090d31db1562184fb559357000d45be32137f577b6fc47ed2ffb",
+    "alpha_vantage/GLOBAL_QUOTE/MSFT.json": "sha256:515b019d48957ddae7c0b7f1572209500d7219fb1cb41755125f4a891ea9b87c",
+    "alpha_vantage/GLOBAL_QUOTE/NVDA.json": "sha256:ae0fd3d1536c4cd2aa95a9ae43e6cde63936d1fcdd9073cd9ef1a0943ab26b56",
+    "alpha_vantage/INCOME_STATEMENT/AAPL.json": "sha256:af0508ef5d4fbdb78fa997264412d48092e6020761dc6335220012ffbe48d94a",
+    "alpha_vantage/INCOME_STATEMENT/MSFT.json": "sha256:e4a4bd3d10119f92ef772693f2672fcd9f758bca3eebf61c836b22b9eb8c5f06",
+    "alpha_vantage/INCOME_STATEMENT/NVDA.json": "sha256:c6e60c938e8b50754eb17512e94f48f402229cc1007d9ac1b3301b178e835a64",
+    "alpha_vantage/NEWS_SENTIMENT/AAPL.json": "sha256:6fd9db040ff015e9e50efdb4b9ba083bfb0e8a4bb02b81545911ed39d8f51dec",
+    "alpha_vantage/NEWS_SENTIMENT/MSFT.json": "sha256:2129b934199ee49985bc1be9d36d5818bcc08026919ab8926cceec006642f6c5",
+    "alpha_vantage/NEWS_SENTIMENT/NVDA.json": "sha256:08917267a5aed41003db95609dd7bf088dc57ccf9de854e511290aa9cbcddc43",
+    "alpha_vantage/TIME_SERIES_DAILY/AAPL.json": "sha256:0d5a363cb5ad41dc55f921e13bba11247e100ee4c9d11c40480df7364a72e08a",
+    "alpha_vantage/TIME_SERIES_DAILY/MSFT.json": "sha256:b0ac18cac8935dfab50c3dafe70d256f589b0d9bf441a9d688393e4dfeb52a50",
+    "alpha_vantage/TIME_SERIES_DAILY/NVDA.json": "sha256:2cd7db79398acc4d9fc56ad48cc8f63a9a8899ff57007b109d9ea005e62d1a62",
+    "alpha_vantage/TIME_SERIES_DAILY_ADJUSTED/AAPL.json": "sha256:36b3ebc4b05552de42af55673269260a4ea7b65324c0a678d83ac74d4602328a",
+    "alpha_vantage/TIME_SERIES_DAILY_ADJUSTED/MSFT.json": "sha256:36b3ebc4b05552de42af55673269260a4ea7b65324c0a678d83ac74d4602328a",
+    "alpha_vantage/TIME_SERIES_DAILY_ADJUSTED/NVDA.json": "sha256:36b3ebc4b05552de42af55673269260a4ea7b65324c0a678d83ac74d4602328a",
+    "sec/archives/1045810/000104581024900001/nvda-20240428.htm": "sha256:2ffc72838d0d6bdb66bd673c0033f33f7002dbd2639cc2992f57d9318a1c5b3f",
+    "sec/archives/1045810/000104581024900002/nvda-20240728.htm": "sha256:ab729b9d5bf10deb2bb31ec9b8f357629c9a0e52cb70565f7df460b928f49de9",
+    "sec/archives/1045810/000104581024900003/nvda-20241027.htm": "sha256:4b5d98ef5bf9b86ccfa91b9130852dd426c07b2ab6c1a625206e9b0afb8b7391",
+    "sec/archives/1045810/000104581025900004/nvda-20250427.htm": "sha256:291b20d099ade89600525e418ca6d75fe433098fa7e9bbc4f6e1f8f9b0c8871a",
+    "sec/archives/1045810/000104581025900005/nvda-20250727.htm": "sha256:52afd407beef6eaaa8ddc5091dcd19b6c9bcf88d63ed430f3a99d3f040dd7e1d",
+    "sec/archives/1045810/000104581025900006/nvda-20251026.htm": "sha256:d2f1af8ad550afd357661da13f7ad8ca51f054e06e9f8c164f61a3dc3a842e45",
+    "sec/archives/1045810/000104581025900009/nvda-20250126.htm": "sha256:4d6794705f7403360c321f125d56cf7c374d5460ccc5e8c0ae1ed81dc6b4021d",
+    "sec/archives/1045810/000104581026900007/nvda-20260426.htm": "sha256:6d1ec0ad02cb089b4f994ad4f375b86c549ce29ed0208f917463f4e255e825c9",
+    "sec/archives/1045810/000104581026900008/nvda-20260726.htm": "sha256:3f961d4c05a5b9e3efa7d1f9476efd0708ae93621ca3dc391c454e7fa3f24f9f",
+    "sec/archives/1045810/000104581026900010/nvda-20260125.htm": "sha256:eaa20a56aaf624a40ef8208ca1d86f98d44bd0d75c55c16dc1fb9180ef80a630",
+    "sec/archives/320193/000032019324900001/aapl-20231230.htm": "sha256:9dd1354de68640867ae21b923852635a013235b651ec4ac902ddb92423c113d7",
+    "sec/archives/320193/000032019324900002/aapl-20240330.htm": "sha256:a8d99cbc681f8b8bc000b399fd2203ccacffac72e961d81ad60c7e5ac08196b1",
+    "sec/archives/320193/000032019324900003/aapl-20240629.htm": "sha256:f4337222b94bdbe6dd1602cfe1900ae1ce0ed0570d0a9494bddee7a5759c1e79",
+    "sec/archives/320193/000032019324900010/aapl-20240928.htm": "sha256:b9c1fbb3243a8477df06a8d84e48d14a7f0efc33e5170a28bd35036d9e7ba46a",
+    "sec/archives/320193/000032019325900004/aapl-20241228.htm": "sha256:36fa27dd78265994429a6ff5e1a0f115aa158fbbedf3dacc369a4391e6e9ea1b",
+    "sec/archives/320193/000032019325900005/aapl-20250329.htm": "sha256:b59e4da5682610c4c0d2c720aeed37801e53bb20b7c5f7e1d50cb1afa4e72cfb",
+    "sec/archives/320193/000032019325900006/aapl-20250628.htm": "sha256:93bf56c984d10addd064b2967d0b9e39085fc8de8efda99eebd44c7d739aa4c6",
+    "sec/archives/320193/000032019325900011/aapl-20250927.htm": "sha256:7bd0362267ccb67bfcaa4b8a9beb7cdac536a55e74348df0e36444162b50ea13",
+    "sec/archives/320193/000032019326900007/aapl-20251227.htm": "sha256:3b8e3d31666f99925092e0a77615052ac220995ba894f0523098d9fa564ba583",
+    "sec/archives/320193/000032019326900008/aapl-20260328.htm": "sha256:85bfc85f27668919c135c438ca5d230b0d49a500099eb123131f3575eb28ea00",
+    "sec/archives/320193/000032019326900009/aapl-20260627.htm": "sha256:231f5058b2b63e7c5a94e8811f90ea043b5bad2e76999e8c81a1fd0622bc7e6b",
+    "sec/archives/789019/000078901924900001/msft-20240930.htm": "sha256:b9523c5465928885c1688be9a80b05bb57b9b1d75e935bf933b07c95a37d3621",
+    "sec/archives/789019/000078901925900002/msft-20241231.htm": "sha256:b96647786dc4bf31f6729d1acc636424593c8bd44e329fc3b0f24b2be6bb3710",
+    "sec/archives/789019/000078901925900003/msft-20250331.htm": "sha256:9a7442852d26887084ee3bc3f3eb442b2f509b131d25d1dcb59d9e40716b42ef",
+    "sec/archives/789019/000078901925900004/msft-20250930.htm": "sha256:ce71df1e374dff05723aebe3300c2639d176298c2db134de8f7d1d467c05bef3",
+    "sec/archives/789019/000078901925900007/msft-20250630.htm": "sha256:f09c9bc8b168efaa81f7d37103d69c4c451264668006f30d15dd090695a7938c",
+    "sec/archives/789019/000078901926900005/msft-20251231.htm": "sha256:696c2fd3011a9f9f2b9723b4ddfb4c49432ec16d927d9dc0b45726b051b10e84",
+    "sec/archives/789019/000078901926900006/msft-20260331.htm": "sha256:bb0a024c0f18a0e1017f9bb94f6a8cdef8f26491baaeaba10ca01648b2ea6c2b",
+    "sec/archives/789019/000078901926900008/msft-20260630.htm": "sha256:60f3d7cb401f4af8e47eb2d13e4a4ba023858da8b1b838d8944fb162ea8b9a68",
+    "sec/company_tickers_exchange.json": "sha256:6afeab340cff2b4320140205d32cd69dd70d9df2e04beb70a0f069866e8c9b09",
+    "sec/companyfacts/CIK0000320193.json": "sha256:4a2ccb3febcdfd34c961b7d1901c4fe7d81849c98266b573e8ab2587de7c6e5c",
+    "sec/companyfacts/CIK0000789019.json": "sha256:a6b377ab4e437d2e3f3e4f41cec04f419d801dddabbdb11d41658071b63a8ae4",
+    "sec/companyfacts/CIK0001045810.json": "sha256:1d17c5b63f56574f9bd06fd85810333b5bbcdbbf738c005e28d1d055a05a1671",
+    "sec/submissions/CIK0000320193.json": "sha256:91cc9cd13e84a89b1a3a1b391d8c7c69eec046f6cb1526622b216e961286282a",
+    "sec/submissions/CIK0000789019.json": "sha256:e8e57f936480771320e1a4aee64b9a4327ab47a4f7ffd5052b20c6a44baf130f",
+    "sec/submissions/CIK0001045810.json": "sha256:803f33b54b97ba12727f28fdf3bc139de0d7f5b19ba640eed491ac5c26651526"
+  }
+}

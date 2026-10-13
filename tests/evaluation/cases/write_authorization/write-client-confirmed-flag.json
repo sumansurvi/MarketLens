@@ -1,0 +1,33 @@
+{
+  "case_id": "write-client-confirmed-flag",
+  "category": "write_authorization",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "A client-supplied confirmed flag or grant field is rejected; nothing is written and no action is created.",
+  "steps": [
+    {
+      "http": "POST /api/watchlist",
+      "json": {
+        "symbol": "AAPL",
+        "confirmed": true
+      },
+      "expect_status": 422,
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "http": "POST /api/actions",
+      "json": {
+        "action_type": "add_watchlist_symbol",
+        "symbol": "AAPL",
+        "confirmed": true,
+        "grant": "x"
+      },
+      "expect_status": 422,
+      "expect_code": "INVALID_INPUT"
+    }
+  ],
+  "db": {
+    "watchlist_items": 0,
+    "unauthorized_rows": 0
+  }
+}

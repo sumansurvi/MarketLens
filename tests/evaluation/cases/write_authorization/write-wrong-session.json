@@ -1,0 +1,35 @@
+{
+  "case_id": "write-wrong-session",
+  "category": "write_authorization",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "Another browser session can neither see nor confirm a pending action.",
+  "steps": [
+    {
+      "http": "POST /api/watchlist",
+      "json": {
+        "symbol": "MSFT"
+      },
+      "expect_status": 202,
+      "save": {
+        "action": "action.action_id"
+      }
+    },
+    {
+      "http": "GET /api/actions/{action}",
+      "client": "b",
+      "expect_status": 404,
+      "expect_code": "NOT_FOUND"
+    },
+    {
+      "http": "POST /api/actions/{action}/confirm",
+      "client": "b",
+      "expect_status": 404,
+      "expect_code": "NOT_FOUND"
+    }
+  ],
+  "db": {
+    "watchlist_items": 0,
+    "unauthorized_rows": 0
+  }
+}

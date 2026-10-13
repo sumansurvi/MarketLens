@@ -1,0 +1,38 @@
+{
+  "case_id": "voice-missing-or-uncovered-ticker",
+  "category": "voice",
+  "kind": "steps",
+  "settings": {
+    "voice_mode": "livekit"
+  },
+  "description": "Voice research without a ticker or with an uncovered ticker is refused with an actionable error; nothing is guessed.",
+  "steps": [
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room": "room_name"
+      }
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/research",
+      "client": "worker",
+      "json": {
+        "symbol": "",
+        "question": "Research a company."
+      },
+      "expect_status": 422,
+      "expect_code": "INVALID_INPUT"
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/research",
+      "client": "worker",
+      "json": {
+        "symbol": "TSLA",
+        "question": "Research Tesla."
+      },
+      "expect_status": 422,
+      "expect_code": "UNKNOWN_SYMBOL"
+    }
+  ]
+}

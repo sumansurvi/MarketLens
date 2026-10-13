@@ -1,0 +1,23 @@
+[project]
+name = "marketlens-mcp-market-data"
+version = "0.1.0"
+description = "MarketLens market_data MCP server (independently runnable process)."
+requires-python = ">=3.11"
+dependencies = [
+  "marketlens-core",
+  "mcp>=2.3,<3",
+]
+
+[project.scripts]
+marketlens-mcp-market-data = "mcp_market_data.server:main"
+
+[tool.uv.sources]
+marketlens-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "mcp_market_data"
+module-root = ""

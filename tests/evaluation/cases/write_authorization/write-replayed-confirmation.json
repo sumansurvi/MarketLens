@@ -1,0 +1,50 @@
+{
+  "case_id": "write-replayed-confirmation",
+  "category": "write_authorization",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "A confirmed save cannot be replayed (ACTION_ALREADY_CONSUMED); exactly one brief is saved.",
+  "steps": [
+    {
+      "http": "POST /api/research",
+      "json": {
+        "symbol": "AAPL",
+        "question": "Research Apple over the window."
+      },
+      "expect_status": 202,
+      "save": {
+        "run": "run.run_id"
+      }
+    },
+    {
+      "wait_run": "{run}",
+      "expect_status": [
+        "completed"
+      ]
+    },
+    {
+      "http": "POST /api/actions",
+      "json": {
+        "action_type": "save_research_brief",
+        "run_id": "{run}"
+      },
+      "expect_status": 202,
+      "save": {
+        "action": "action.action_id"
+      }
+    },
+    {
+      "http": "POST /api/actions/{action}/confirm",
+      "expect_status": 200
+    },
+    {
+      "http": "POST /api/actions/{action}/confirm",
+      "expect_status": 409,
+      "expect_code": "ACTION_ALREADY_CONSUMED"
+    }
+  ],
+  "db": {
+    "saved_briefs": 1,
+    "unauthorized_rows": 0
+  }
+}

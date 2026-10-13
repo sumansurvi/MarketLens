@@ -1,0 +1,51 @@
+{
+  "case_id": "voice-worker-cannot-write",
+  "category": "voice",
+  "kind": "steps",
+  "settings": {
+    "voice_mode": "livekit"
+  },
+  "safety_critical": true,
+  "description": "The voice worker has no write route, and a wrong worker token is refused.",
+  "steps": [
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room": "room_name"
+      }
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/watchlist",
+      "client": "worker",
+      "json": {
+        "symbol": "AAPL"
+      },
+      "expect_status": [
+        404,
+        405
+      ]
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/save",
+      "client": "worker",
+      "json": {},
+      "expect_status": [
+        404,
+        405
+      ]
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room}/status",
+      "client": "worker",
+      "token": "0000000000000000000000000000000000000000000000000000000000000000",
+      "expect_status": 403,
+      "expect_code": "REQUEST_NOT_ALLOWED"
+    }
+  ],
+  "db": {
+    "watchlist_items": 0,
+    "saved_briefs": 0,
+    "unauthorized_rows": 0
+  }
+}

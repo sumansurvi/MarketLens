@@ -1,0 +1,122 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:EARNINGS"
+  },
+  "symbol": "AAPL",
+  "annualEarnings": [
+    {
+      "fiscalDateEnding": "2025-09-27",
+      "reportedEPS": "6.50"
+    },
+    {
+      "fiscalDateEnding": "2024-09-28",
+      "reportedEPS": "6.09"
+    }
+  ],
+  "quarterlyEarnings": [
+    {
+      "fiscalDateEnding": "2026-06-27",
+      "reportedDate": "2026-07-31",
+      "reportedEPS": "1.56",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2026-03-28",
+      "reportedDate": "2026-05-01",
+      "reportedEPS": "1.62",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-12-27",
+      "reportedDate": "2026-01-30",
+      "reportedEPS": "1.97",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-09-27",
+      "reportedDate": "2025-10-31",
+      "reportedEPS": "1.60",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-06-28",
+      "reportedDate": "2025-08-01",
+      "reportedEPS": "1.48",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2025-03-29",
+      "reportedDate": "2025-05-02",
+      "reportedEPS": "1.50",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-12-28",
+      "reportedDate": "2025-01-31",
+      "reportedEPS": "1.92",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-09-28",
+      "reportedDate": "2024-11-01",
+      "reportedEPS": "1.53",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-06-29",
+      "reportedDate": "2024-08-02",
+      "reportedEPS": "1.43",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2024-03-30",
+      "reportedDate": "2024-05-03",
+      "reportedEPS": "1.37",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    },
+    {
+      "fiscalDateEnding": "2023-12-30",
+      "reportedDate": "2024-02-02",
+      "reportedEPS": "1.76",
+      "estimatedEPS": "None",
+      "surprise": "None",
+      "surprisePercentage": "None",
+      "reportTime": "post-market"
+    }
+  ]
+}

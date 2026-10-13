@@ -1,0 +1,90 @@
+{
+  "case_id": "normal-nvda-issuer-revenue-tag",
+  "category": "normal_research",
+  "description": "NVDA reports revenue under us-gaap:Revenues; the brief uses that tag without imputation.",
+  "kind": "research",
+  "request": {
+    "symbol": "NVDA",
+    "question": "Give me a research briefing on Nvidia and explain what changed recently."
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "required_tools": [
+      {
+        "tool": "resolve_symbol",
+        "args": {
+          "symbol": "NVDA"
+        }
+      },
+      {
+        "tool": "get_provider_status"
+      },
+      {
+        "tool": "get_quote",
+        "args": {
+          "symbol": "NVDA"
+        }
+      },
+      {
+        "tool": "get_historical_prices",
+        "args": {
+          "symbol": "NVDA",
+          "start_date": "2026-06-30",
+          "end_date": "2026-09-30",
+          "interval": "daily",
+          "adjusted": false
+        }
+      },
+      {
+        "tool": "calculate_price_change",
+        "args": {
+          "symbol": "NVDA",
+          "start_date": "2026-06-30",
+          "end_date": "2026-09-30",
+          "price_field": "close"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "NVDA",
+          "period_type": "quarterly"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "NVDA",
+          "period_type": "annual"
+        }
+      },
+      {
+        "tool": "search_company_filings",
+        "args": {
+          "symbol": "NVDA"
+        }
+      },
+      {
+        "tool": "get_filing_excerpt"
+      },
+      {
+        "tool": "search_company_news",
+        "args": {
+          "symbol": "NVDA"
+        }
+      }
+    ],
+    "claims_include": [
+      "Revenue for the quarter ended"
+    ],
+    "withheld_count": 0,
+    "cited_concepts": [
+      "Revenues"
+    ],
+    "prohibited_text": [
+      "us-gaap:"
+    ]
+  }
+}

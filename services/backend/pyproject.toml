@@ -1,0 +1,24 @@
+[project]
+name = "marketlens-backend"
+version = "0.1.0"
+description = "MarketLens FastAPI backend and shared research workflow."
+requires-python = ">=3.11"
+dependencies = [
+  "marketlens-core",
+  "mcp>=2.3,<3",
+  "openai>=3.26,<4",
+  "livekit-api>=1.2.1,<2",
+  "fastapi>=0.143",
+  "uvicorn[standard]>=0.54",
+]
+
+[tool.uv.sources]
+marketlens-core = { workspace = true }
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "app"
+module-root = ""

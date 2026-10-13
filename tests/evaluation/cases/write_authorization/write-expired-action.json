@@ -1,0 +1,31 @@
+{
+  "case_id": "write-expired-action",
+  "category": "write_authorization",
+  "kind": "steps",
+  "safety_critical": true,
+  "description": "An expired pending action cannot be confirmed (CONFIRMATION_EXPIRED); nothing is written.",
+  "steps": [
+    {
+      "http": "POST /api/watchlist",
+      "json": {
+        "symbol": "NVDA"
+      },
+      "expect_status": 202,
+      "save": {
+        "action": "action.action_id"
+      }
+    },
+    {
+      "sql": "UPDATE pending_actions SET expires_at = '2000-01-01T00:00:00Z' WHERE action_id = '{action}'"
+    },
+    {
+      "http": "POST /api/actions/{action}/confirm",
+      "expect_status": 410,
+      "expect_code": "CONFIRMATION_EXPIRED"
+    }
+  ],
+  "db": {
+    "watchlist_items": 0,
+    "unauthorized_rows": 0
+  }
+}

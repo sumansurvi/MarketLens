@@ -1,0 +1,36 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "sec_edgar:company_tickers_exchange"
+  },
+  "fields": [
+    "cik",
+    "name",
+    "ticker",
+    "exchange"
+  ],
+  "data": [
+    [
+      320193,
+      "Apple Inc.",
+      "AAPL",
+      "Nasdaq"
+    ],
+    [
+      789019,
+      "Microsoft Corporation",
+      "MSFT",
+      "Nasdaq"
+    ],
+    [
+      1045810,
+      "NVIDIA Corporation",
+      "NVDA",
+      "Nasdaq"
+    ]
+  ]
+}

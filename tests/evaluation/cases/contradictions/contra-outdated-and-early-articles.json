@@ -1,0 +1,38 @@
+{
+  "case_id": "contra-outdated-and-early-articles",
+  "category": "contradictions",
+  "description": "Articles published after and before the window are excluded from in-window events, and the exclusion is disclosed.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple news."
+  },
+  "overlays": {
+    "alpha_vantage/NEWS_SENTIMENT/AAPL.json": {
+      "prepend_feed": [
+        {
+          "title": "Illustrative: Late article after the window",
+          "url": "https://example.com/marketlens-fixture/news/aapl-late",
+          "time_published": "20261005T120000"
+        },
+        {
+          "title": "Illustrative: Early article before the window",
+          "url": "https://example.com/marketlens-fixture/news/aapl-early",
+          "time_published": "20260601T120000"
+        }
+      ]
+    }
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "source_notes_include": [
+      "published outside the requested window were excluded"
+    ],
+    "prohibited_text": [
+      "Late article after the window",
+      "Early article before the window"
+    ]
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "case_id": "stale-old-quote",
+  "category": "missing_stale",
+  "description": "The provider quote is 12 days old: labeled stale, never presented as current; the report is partial.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple over the window."
+  },
+  "overlays": {
+    "alpha_vantage/GLOBAL_QUOTE/AAPL.json": {
+      "merge": {
+        "Global Quote": {
+          "05. price": "219.4500",
+          "07. latest trading day": "2026-09-18"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "error_codes_include": [
+      "STALE_DATA"
+    ],
+    "gap_reason_codes_include": [
+      "STALE_DATA"
+    ],
+    "claims_include": [
+      "marked stale"
+    ]
+  }
+}

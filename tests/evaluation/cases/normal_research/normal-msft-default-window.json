@@ -1,0 +1,89 @@
+{
+  "case_id": "normal-msft-default-window",
+  "category": "normal_research",
+  "description": "MSFT default research: market, fundamentals and filings available; news unavailable by plan and labeled.",
+  "kind": "research",
+  "request": {
+    "symbol": "MSFT",
+    "question": "Review price movement, news and risks."
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "categories": {
+      "market": "available",
+      "fundamentals": "available",
+      "filings": "available",
+      "news": "unavailable"
+    },
+    "gap_reason_codes_include": [
+      "CAPABILITY_UNAVAILABLE"
+    ],
+    "required_tools": [
+      {
+        "tool": "resolve_symbol",
+        "args": {
+          "symbol": "MSFT"
+        }
+      },
+      {
+        "tool": "get_provider_status"
+      },
+      {
+        "tool": "get_quote",
+        "args": {
+          "symbol": "MSFT"
+        }
+      },
+      {
+        "tool": "get_historical_prices",
+        "args": {
+          "symbol": "MSFT",
+          "start_date": "2026-06-30",
+          "end_date": "2026-09-30",
+          "interval": "daily",
+          "adjusted": false
+        }
+      },
+      {
+        "tool": "calculate_price_change",
+        "args": {
+          "symbol": "MSFT",
+          "start_date": "2026-06-30",
+          "end_date": "2026-09-30",
+          "price_field": "close"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "MSFT",
+          "period_type": "quarterly"
+        }
+      },
+      {
+        "tool": "get_sec_company_facts",
+        "args": {
+          "symbol": "MSFT",
+          "period_type": "annual"
+        }
+      },
+      {
+        "tool": "search_company_filings",
+        "args": {
+          "symbol": "MSFT"
+        }
+      },
+      {
+        "tool": "get_filing_excerpt"
+      },
+      {
+        "tool": "search_company_news",
+        "args": {
+          "symbol": "MSFT"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "case_id": "timeout-news-source",
+  "category": "missing_stale",
+  "description": "The news provider times out: news failed with PROVIDER_TIMEOUT, other categories complete, report partial.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple over the window."
+  },
+  "overlays": {
+    "alpha_vantage/NEWS_SENTIMENT/AAPL.json": {
+      "fault": {
+        "type": "timeout"
+      },
+      "shape": "alpha_vantage:NEWS_SENTIMENT"
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "categories": {
+      "news": "failed",
+      "market": "available"
+    },
+    "error_codes_include": [
+      "PROVIDER_TIMEOUT"
+    ],
+    "gap_reason_codes_include": [
+      "PROVIDER_TIMEOUT"
+    ]
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:INCOME_STATEMENT"
+  },
+  "symbol": "MSFT",
+  "annualReports": [
+    {
+      "fiscalDateEnding": "2026-06-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "306088000000",
+      "operatingIncome": "134525000000",
+      "netIncome": "106482000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2025-06-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "272654000000",
+      "operatingIncome": "121602000000",
+      "netIncome": "94913000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    }
+  ],
+  "quarterlyReports": [
+    {
+      "fiscalDateEnding": "2026-06-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "81537000000",
+      "operatingIncome": "36960000000",
+      "netIncome": "29303000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2026-03-31",
+      "reportedCurrency": "USD",
+      "totalRevenue": "76226000000",
+      "operatingIncome": "32778000000",
+      "netIncome": "26206000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2025-12-31",
+      "reportedCurrency": "USD",
+      "totalRevenue": "76646000000",
+      "operatingIncome": "33516000000",
+      "netIncome": "26659000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2025-09-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "71679000000",
+      "operatingIncome": "31271000000",
+      "netIncome": "24314000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2025-06-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "72578000000",
+      "operatingIncome": "31852000000",
+      "netIncome": "25995000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2025-03-31",
+      "reportedCurrency": "USD",
+      "totalRevenue": "68551000000",
+      "operatingIncome": "30956000000",
+      "netIncome": "23811000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2024-12-31",
+      "reportedCurrency": "USD",
+      "totalRevenue": "67267000000",
+      "operatingIncome": "30129000000",
+      "netIncome": "23179000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    },
+    {
+      "fiscalDateEnding": "2024-09-30",
+      "reportedCurrency": "USD",
+      "totalRevenue": "64258000000",
+      "operatingIncome": "28665000000",
+      "netIncome": "21928000000",
+      "grossProfit": "None",
+      "ebitda": "None"
+    }
+  ]
+}

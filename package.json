@@ -1,0 +1,19 @@
+{
+  "name": "marketlens",
+  "private": true,
+  "description": "MarketLens \u2014 evidence-grounded AI equity research (research only, no trading).",
+  "packageManager": "pnpm@12.10.1",
+  "engines": {
+    "node": ">=20.9"
+  },
+  "scripts": {
+    "dev": "uv run python scripts/dev.py",
+    "seed": "uv run python scripts/seed_demo.py",
+    "evaluate": "uv run python scripts/run_evaluation.py",
+    "test": "uv run pytest",
+    "dev:web": "pnpm --dir apps/web dev",
+    "lint": "pnpm --dir apps/web lint",
+    "typecheck": "pnpm --dir apps/web typecheck",
+    "build": "pnpm --dir apps/web build"
+  }
+}

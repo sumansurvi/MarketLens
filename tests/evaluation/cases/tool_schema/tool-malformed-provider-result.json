@@ -1,0 +1,33 @@
+{
+  "case_id": "tool-malformed-provider-result",
+  "category": "tool_schema",
+  "kind": "research",
+  "description": "A malformed provider quote maps to MALFORMED_PROVIDER_RESPONSE; market is partial and nothing is guessed.",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple over the window."
+  },
+  "overlays": {
+    "alpha_vantage/GLOBAL_QUOTE/AAPL.json": {
+      "merge": {
+        "Global Quote": {
+          "05. price": "not-a-number"
+        }
+      }
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "categories": {
+      "market": "partial"
+    },
+    "error_codes_include": [
+      "MALFORMED_PROVIDER_RESPONSE"
+    ],
+    "gap_reason_codes_include": [
+      "MALFORMED_PROVIDER_RESPONSE"
+    ]
+  }
+}

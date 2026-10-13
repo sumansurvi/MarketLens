@@ -1,0 +1,52 @@
+{
+  "case_id": "voice-partial-spoken-as-partial",
+  "category": "voice",
+  "kind": "steps",
+  "settings": {
+    "voice_mode": "livekit"
+  },
+  "llm": {
+    "failing_tasks": [
+      "news_specialist"
+    ]
+  },
+  "description": "When a model step fails, the voice summary says the report is partial and why.",
+  "steps": [
+    {
+      "http": "POST /api/voice/session",
+      "expect_status": 201,
+      "save": {
+        "room": "room_name"
+      }
+    },
+    {
+      "http": "POST /api/internal/voice/rooms/{room}/research",
+      "client": "worker",
+      "json": {
+        "symbol": "AAPL",
+        "question": "Research Apple."
+      },
+      "expect_status": 202,
+      "save": {
+        "run": "run_id"
+      }
+    },
+    {
+      "wait_run": "{run}",
+      "expect_status": [
+        "partial"
+      ]
+    },
+    {
+      "http": "GET /api/internal/voice/rooms/{room}/summary",
+      "client": "worker",
+      "expect_json": {
+        "status": "partial"
+      },
+      "expect_contains": {
+        "status_sentence": "is partial",
+        "caveats": "Partial because"
+      }
+    }
+  ]
+}

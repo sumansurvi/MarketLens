@@ -1,0 +1,26 @@
+{
+  "case_id": "missing-filing-document",
+  "category": "missing_stale",
+  "description": "The latest 10-Q document is missing: filings are partial with a reason and no risk text is invented.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple filings and risks."
+  },
+  "overlays": {
+    "sec/archives/320193/000032019326900009/aapl-20260627.htm": {
+      "remove": true
+    }
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "categories": {
+      "filings": "partial"
+    },
+    "gap_reason_codes_include": [
+      "DATA_UNAVAILABLE"
+    ]
+  }
+}

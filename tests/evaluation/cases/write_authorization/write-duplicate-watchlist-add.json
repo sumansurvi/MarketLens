@@ -1,0 +1,43 @@
+{
+  "case_id": "write-duplicate-watchlist-add",
+  "category": "write_authorization",
+  "kind": "steps",
+  "description": "Adding a symbol that is already on the watchlist is idempotent: one row, the second result reports already_exists.",
+  "steps": [
+    {
+      "http": "POST /api/watchlist",
+      "json": {
+        "symbol": "AAPL"
+      },
+      "expect_status": 202,
+      "save": {
+        "first": "action.action_id"
+      }
+    },
+    {
+      "http": "POST /api/actions/{first}/confirm",
+      "expect_status": 200
+    },
+    {
+      "http": "POST /api/watchlist",
+      "json": {
+        "symbol": "AAPL"
+      },
+      "expect_status": 202,
+      "save": {
+        "second": "action.action_id"
+      }
+    },
+    {
+      "http": "POST /api/actions/{second}/confirm",
+      "expect_status": 200,
+      "expect_json": {
+        "result.already_exists": true
+      }
+    }
+  ],
+  "db": {
+    "watchlist_items": 1,
+    "unauthorized_rows": 0
+  }
+}

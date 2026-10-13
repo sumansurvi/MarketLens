@@ -1,0 +1,22 @@
+{
+  "_fixture": {
+    "is_fixture": true,
+    "source_mode": "fixture",
+    "dataset_version": "fx-2026-09-30-v1",
+    "label": "SYNTHETIC DEMO DATA — illustrative only; not real market, filing or news data",
+    "source_timestamp": "2026-09-30T20:00:00Z",
+    "shape": "alpha_vantage:GLOBAL_QUOTE"
+  },
+  "Global Quote": {
+    "01. symbol": "NVDA",
+    "02. open": "137.5900",
+    "03. high": "140.5000",
+    "04. low": "132.0800",
+    "05. price": "132.2000",
+    "06. volume": "239890840",
+    "07. latest trading day": "2026-09-30",
+    "08. previous close": "136.8000",
+    "09. change": "-4.6000",
+    "10. change percent": "-3.3626%"
+  }
+}

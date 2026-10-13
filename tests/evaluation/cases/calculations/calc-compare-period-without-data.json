@@ -1,0 +1,25 @@
+{
+  "case_id": "calc-compare-period-without-data",
+  "category": "calculations",
+  "description": "A period before provider coverage is unavailable with a reason; no difference is computed or estimated.",
+  "kind": "compare",
+  "request": {
+    "symbol": "MSFT",
+    "periods": [
+      {
+        "start_date": "2025-01-02",
+        "end_date": "2025-02-03"
+      },
+      {
+        "start_date": "2026-08-14",
+        "end_date": "2026-09-30"
+      }
+    ]
+  },
+  "expect": {
+    "difference_computed": false,
+    "unavailable_periods": [
+      "A"
+    ]
+  }
+}

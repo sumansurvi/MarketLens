@@ -1,0 +1,66 @@
+# Development umbrella for the MarketLens Python services.
+#
+# One uv workspace -> one lockfile (uv.lock) and one virtual environment (.venv).
+# Each member under services/ is its own package; the three MCP servers are
+# independently runnable processes even though they share this environment.
+[project]
+name = "marketlens"
+version = "0.1.0"
+description = "MarketLens development umbrella: installs every service package for local runs and tests."
+requires-python = ">=3.11"
+dependencies = [
+  "marketlens-core",
+  "marketlens-backend",
+  "marketlens-mcp-market-data",
+  "marketlens-mcp-research-sources",
+  "marketlens-mcp-research-workspace",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1",
+  "ruff>=0.16",
+]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+members = ["services/*"]
+# The LiveKit voice worker is a separate uv project with its own lockfile: livekit-agents
+# requires openai<3 while the backend uses openai 3.x, and voice is optional (decision D-53).
+exclude = ["services/voice_agent"]
+
+[tool.uv.sources]
+marketlens-core = { workspace = true }
+marketlens-backend = { workspace = true }
+marketlens-mcp-market-data = { workspace = true }
+marketlens-mcp-research-sources = { workspace = true }
+marketlens-mcp-research-workspace = { workspace = true }
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"
+markers = [
+  "live: requires real provider credentials; skipped unless explicitly enabled",
+]
+filterwarnings = ["error::pytest.PytestUnraisableExceptionWarning"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+extend-exclude = ["apps", "node_modules", "data"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "ASYNC"]
+ignore = [
+  "S101",  # assert is fine in tests
+  "B008",  # FastAPI Depends() in defaults
+  "E501",  # line length is owned by `ruff format`; long user-facing strings are not split
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S105", "S106", "S108", "S311"]
+"services/voice_agent/tests/**" = ["S105", "S106", "S108", "S311"]
+"scripts/**" = ["S311"]

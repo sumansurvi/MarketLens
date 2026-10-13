@@ -1,0 +1,31 @@
+{
+  "case_id": "calc-quarterly-vs-annual-blocked",
+  "category": "calculations",
+  "description": "A model finding comparing quarterly with annual revenue is withheld by the period-compatibility rule.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple fundamentals."
+  },
+  "llm": {
+    "rewrites": [
+      {
+        "task": "fundamentals_specialist",
+        "op": "add_quarterly_annual_comparison",
+        "text": "Quarterly revenue was far lower than annual revenue."
+      }
+    ]
+  },
+  "expect": {
+    "status": [
+      "partial"
+    ],
+    "withheld": [
+      {
+        "validation_status": "unsupported",
+        "note_contains": "quarterly and annual"
+      }
+    ],
+    "withheld_count": 1
+  }
+}

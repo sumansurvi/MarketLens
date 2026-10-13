@@ -1,0 +1,35 @@
+{
+  "case_id": "missing-sec-metric",
+  "category": "missing_stale",
+  "description": "Net income missing from SEC company facts: disclosed as an unknown and never imputed.",
+  "kind": "research",
+  "request": {
+    "symbol": "AAPL",
+    "question": "Research Apple fundamentals."
+  },
+  "overlays": {
+    "sec/companyfacts/CIK0000320193.json": {
+      "delete": [
+        [
+          "facts",
+          "us-gaap",
+          "NetIncomeLoss"
+        ]
+      ]
+    }
+  },
+  "expect": {
+    "status": [
+      "completed"
+    ],
+    "gap_reason_codes_include": [
+      "CONCEPT_MISSING"
+    ],
+    "gap_text_includes": [
+      "Net income was not found"
+    ],
+    "prohibited_text": [
+      "net income for the quarter"
+    ]
+  }
+}
