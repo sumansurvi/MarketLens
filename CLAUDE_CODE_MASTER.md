@@ -1,6 +1,6 @@
 # MarketLens — Claude Code Master Build Instructions
 
-> **As built (reviewed 2026-10-12).** This build contract is kept as written. The project is complete against it; post-MVP changes requested by the user (D-76 to D-90) are recorded in [`PROJECT_STATUS.md`](PROJECT_STATUS.md), and the system as built is described in [`architecture.md`](architecture.md). Where they differ from the rules below (for example, the web app no longer offers saving briefs or a watchlist), the decision log explains why.
+> **As built (reviewed 2026-10-13).** This build contract is kept as written. The project is complete against it; post-MVP changes requested by the user (D-76 to D-97, including research search in D-96 and Vercel + Render deployment in D-94 and D-97) are recorded in [`PROJECT_STATUS.md`](PROJECT_STATUS.md), and the system as built is described in [`architecture.md`](architecture.md). Where they differ from the rules below (for example, the web app no longer offers saving briefs or a watchlist), the decision log explains why.
 
 > **Purpose:** This is the execution contract for Claude Code. Read this file first, then read `architecture.md`, `PRD.md`, `MCP_TOOLS.md`, `VOICE_AND_AGENTS.md`, `EVALUATION.md`, and `README.md` before writing application code.
 >

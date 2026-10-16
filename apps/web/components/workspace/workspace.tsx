@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { SearchIcon } from "../icons";
 import { Modal } from "../modal";
 import { RunView } from "../run/run-view";
 import { useStatus } from "../status-provider";
@@ -9,6 +10,7 @@ import { useVoiceControl, VoiceButton, VoiceTray } from "../voice/voice-panel";
 import { Rail } from "./rail";
 import { ResearchBar } from "./research-bar";
 import { GuideButton } from "./guide";
+import { SearchModal } from "./search";
 import { SuggestionsRail } from "./suggestions";
 import { Welcome } from "./welcome";
 import { type Preset, type View, type WorkspaceApi, WorkspaceProvider } from "./workspace-context";
@@ -83,6 +85,7 @@ export function Workspace({ initial }: { initial: WorkspaceInitial }) {
   const [version, setVersion] = useState(0);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [currentSymbol, setCurrentSymbol] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
 
   function show(next: View) {
     setView(next);
@@ -91,10 +94,29 @@ export function Workspace({ initial }: { initial: WorkspaceInitial }) {
     window.history.replaceState(null, "", urlFor(next));
   }
 
+  function openSearch() {
+    setMenuOpen(false); // from the History dialog in narrower windows: one dialog at a time
+    setSearchOpen(true);
+  }
+
+  // ⌘K (Mac) or Ctrl+K anywhere opens the search, like most chat apps.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.metaKey || event.ctrlKey) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setMenuOpen(false);
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const workspace: WorkspaceApi = {
     view,
     openRun: (id) => show({ kind: "run", id }),
     goHome: () => show(null),
+    openSearch,
     prefill: (symbol, question) => setPreset((p) => ({ symbol, question, nonce: (p?.nonce ?? 0) + 1 })),
     preset,
     version,
@@ -126,6 +148,15 @@ export function Workspace({ initial }: { initial: WorkspaceInitial }) {
               <span className="text-base font-semibold tracking-tight text-ink">MarketLens</span>
             </button>
             <nav aria-label="Workspace" className="ml-auto flex items-center gap-0.5 xl:hidden">
+              {/* In wider windows the search sits beside New research in the history rail (D-96). */}
+              <button
+                type="button"
+                onClick={openSearch}
+                aria-label="Search research"
+                className="grid h-8 w-8 place-items-center rounded-lg text-ink-2 transition hover:bg-sunken hover:text-ink lg:hidden"
+              >
+                <SearchIcon />
+              </button>
               <button
                 type="button"
                 className="rounded-lg px-2 py-1.5 text-sm font-medium text-ink-2 transition hover:bg-sunken hover:text-ink sm:px-3 lg:hidden"
@@ -163,6 +194,7 @@ export function Workspace({ initial }: { initial: WorkspaceInitial }) {
             <Rail />
           </Modal>
         )}
+        {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} />}
       </div>
     </WorkspaceProvider>
   );

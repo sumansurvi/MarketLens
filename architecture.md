@@ -6,7 +6,7 @@
 **Implementation languages:** TypeScript (Next.js web app) and Python (backend, MCP servers, voice worker)  
 **Local database:** SQLite  
 **Status:** Implemented. All phase gates (0–7) have passed. Since then, live data (a free Alpha Vantage key, SEC EDGAR and Yahoo Finance headlines), a free local model (Ollama) and spoken voice sessions (LiveKit Cloud) have run on the development machine; OpenAI's hosted API has not (no key). See [`PROJECT_STATUS.md`](PROJECT_STATUS.md).  
-**Last documentation review:** 2026-10-12 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing, voice with Lens; D-80 to D-90)
+**Last documentation review:** 2026-10-13 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing and PDF, voice with Lens, quick guide, research search, Vercel + Render deployment; D-80 to D-97)
 
 > **How to read this document.**
 > - **§1–§5** describe the system as built. Where the build deliberately differs from the original plan, the text says so and cites the decision (D-xx) in [`PROJECT_STATUS.md` › Decision log](PROJECT_STATUS.md#4-decision-log). §2.2 collects those differences in one table.
@@ -59,6 +59,15 @@ flowchart TD
 ```
 
 - **Web → backend.** The browser talks only to the web app's own origin. A Next.js rewrite proxies `/api/*` to `BACKEND_URL`, so the HTTP-only session cookie stays first-party and no backend address or key is in the browser bundle (D-06).
+- **Hosted deployment (D-94).**
+  - The web app runs on **Vercel** (Root Directory `apps/web`). The backend runs on a **container host**: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`. The optional voice worker runs as a background worker (`Dockerfile.voice`).
+  - The backend can't run on Vercel because it keeps three MCP subprocesses, background research runs and a SQLite file.
+  - `apps/web/proxy.ts` (Next 16's renamed middleware) runs before every page and `/api` request:
+    - It can ask for a site password (`SITE_PASSWORD`, HTTP Basic).
+    - On `/api` requests it removes the browser's `Authorization` header and any client-sent secret, then adds `X-MarketLens-Proxy-Secret` (`PROXY_SHARED_SECRET`) server-side.
+  - With `PROXY_SHARED_SECRET` set, the backend rejects every `/api` request without it (403). Two routes are exempt: `/api/health` (the host's health check) and the voice worker's internal API, which has its own token.
+  - `APP_ENV=production` marks the session cookie `Secure`.
+  - Locally none of these are set, and nothing changes.
 - **Backend → tools.** All data access and every workspace read and write go through the MCP client gateway. The gateway talks to three separate MCP server processes over stdio. There is no in-process shortcut: the temporary Phase 1 in-process gateway was deleted in Phase 2 (D-29).
 - **Voice is an interaction adapter, not a second research system.**
   - When voice is configured, the browser asks the backend for a voice session. It receives a short-lived, room-scoped LiveKit token and never the API secret. The token dispatches the voice worker into that room.
@@ -86,11 +95,14 @@ data/runtime/logs/                MCP server logs (git-ignored)
 scripts/                          dev.py, seed_demo.py, run_evaluation.py, generate_fixtures.py, export_openapi.py
 tests/                            unit, integration (real MCP servers), evaluation (49 cases), live (credential-gated)
 reports/evaluation/               latest evaluation report (JSON and Markdown)
-docs/                             five-minute demo script, screenshots, Vercel deployment guide
-Makefile                          start / stop / status / run / test / evaluate (local toolchain, or Docker as a fallback)
+docs/                             five-minute demo script, feature checklist, testing guide, screenshots, Vercel + Render deployment guide
+Makefile                          install / seed / start / run / stop / restart / status / logs / test / evaluate / lint (local toolchain, or Docker as a fallback)
 Dockerfile, docker-compose.yml    optional Docker toolchain for running the app without local Node, pnpm or uv
-Dockerfile.backend                production-style backend image (FastAPI plus the three MCP servers it spawns)
+Dockerfile.backend                production backend image (FastAPI plus the three MCP servers it spawns; SQLite on /data)
+Dockerfile.voice                  optional voice worker image (LiveKit agent, no inbound port)
+render.yaml                       Render Blueprint: the backend from Dockerfile.backend with a disk, demo mode, a generated proxy secret (D-94)
 apps/web/vercel.json              Vercel settings for the web app (the backend runs on a container host)
+apps/web/proxy.ts                 optional site password, and the backend shared secret added to /api requests (D-94)
 ```
 
 Python is one uv workspace: a root `pyproject.toml` and one lockfile covering every `services/*` package except the voice worker (D-04). The worker is excluded because `livekit-agents` requires `openai<3` while the backend uses `openai` 3.x (D-53). The web app is a pnpm workspace member (`apps/*`).
@@ -112,6 +124,7 @@ Python is one uv workspace: a root `pyproject.toml` and one lockfile covering ev
 | Separate pages: research home, run page, saved briefs, watchlist, settings | One chat-style screen: history rail on the left, the run in the middle, quick starts on the right, and a one-line research bar (ticker dropdown, dictation, voice session) docked at the bottom. Run details and comparisons open as dialogs. Saved briefs, the watchlist and data status have no UI (API only); `/research/[runId]` still opens a run | D-78, D-81, D-82, D-83 |
 | OpenAI as the only real model | Any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, so a free local model (Ollama) works without a key | D-76 |
 | Alpha Vantage requests limited per process (D-40) | Pacing shared by every process through SQLite, one upstream call for identical concurrent requests, one retry after a per-second rejection, and the daily quota reported as such | D-77 |
+| Deployment notes only; the app runs locally | Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94 |
 
 ## 3. Components and responsibilities
 
@@ -121,11 +134,11 @@ The web app is **one chat-style screen** (D-78, D-81, D-82). Nothing navigates a
 
 ```text
 ┌ mode banner (DEMO FIXTURES / LIVE DATA) ──────────────────────────────────────────────────────┐
-│ logo                                              (History, Explore in narrower windows)   │  frozen
+│ logo                                         (🔍, History, Explore in narrower windows)    │  frozen
 ├──────────────┬─────────────────────────────────────────────────┬─────────────────────────────┤
-│ research     │ summary bar: ticker, status, price ▲ change,      │ try one of these           │  frozen
-│ history      │ the full question · Re-run · Compare · Details    │ (quick starts, wide        │
-│ (frozen rail)├───────────────────────────────────────────────────┤  screens; the evidence     │
+│ [New] [🔍]   │ summary bar: ticker, status, price ▲ change,      │ try one of these           │  frozen
+│ research     │ the full question · Re-run · Compare · Details    │ (quick starts, wide        │
+│ history      ├───────────────────────────────────────────────────┤  screens; the evidence     │
 │              │ Heads up · brief sections (the only part that     │  inspector takes this      │
 │              │ scrolls)                                          │  place while it is open)   │
 │              ├───────────────────────────────────────────────────┤                            │
@@ -135,27 +148,32 @@ The web app is **one chat-style screen** (D-78, D-81, D-82). Nothing navigates a
 └──────────────┴───────────────────────────────────────────────────┴────────────────────────────┘
 ```
 
-- **Research bar (composer):** docked at the bottom of the main pane, centered and at most 56 rem wide, like ChatGPT's composer. From tablet width up it is one line: the ticker dropdown (5.5 rem), the question ("What do you want to know?", optional), the time-window menu in full words (3 months · 1 month · 6 months · 12 months · Custom dates; it sizes to the selected label), the dictation microphone 🎙, the voice-session button 〰 and the round **Research** (↑) button. In a very narrow window the menu and the buttons wrap to a second row. Enter submits; **Custom dates** adds a row of two date fields.
+- **Research bar (composer):** docked at the bottom of the main pane, centered and at most 56 rem wide, like ChatGPT's composer. In laptop and desktop windows it is one line: the ticker dropdown (5.5 rem), the question ("What do you want to know?", optional), the time-window menu in full words (3 months · 1 month · 6 months · 12 months · Custom dates; it sizes to the selected label), the dictation microphone 🎙, the voice-session button 〰 and the round **Research** (↑) button. In a very narrow window the menu and the buttons wrap to a second row. Enter submits; **Custom dates** adds a row of two date fields.
 - **Dictation (D-83):** the microphone uses the browser's Web Speech API (`SpeechRecognition` / `webkitSpeechRecognition`, continuous with interim results, in the browser's language). Spoken words appear in the question box as you talk, after anything already typed; pressing ■ stops. Nothing is spoken back and no backend is involved: the browser's speech service transcribes (Chrome and Edge send audio to their vendor, Safari to Apple). Where the API is missing (Firefox) the button is dimmed and explains why. Dictation is off while a voice session runs, and starting a voice session stops it.
 - **Ticker dropdown (D-82, D-84):** an ARIA combobox whose list always has values. Opening it (click, focus or ↓) shows, in groups, **In this research** (the ticker of the run on screen), **Recently researched**, and **Largest companies** (`GET /api/symbols` with no query; **In the demo data** in fixture mode); the chosen ticker is marked ✓ and its text is selected so typing replaces it. Typing a ticker or company name filters through `search_symbols`, debounced, opening upward. Arrow keys move, Enter or a click picks (focus then moves to the question), Esc closes. Empty, the field reads **Ticker** in the accent colour with an accent ring, so it is clear a ticker is needed. The field follows the run on screen (`RunView` reports its symbol through `setCurrentSymbol`) and clears on the welcome screen. Picking only fills the field: research still resolves the exact ticker submitted (D-15).
+- **Search research (D-96):** a search icon beside **New research** in the history rail (in narrower windows, 🔍 in the header), or ⌘K / Ctrl+K anywhere, opens `SearchModal` (`workspace/search.tsx`), pinned near the top of the window (`Modal placement="top"`).
+  - **Empty box:** it suggests **Tickers you've researched** (chips that search that ticker) and **Recent research**.
+  - **Typing:** after 180 ms it calls `GET /api/research/search?q=` and lists the matches as an ARIA combobox (↑ ↓, Enter, Esc). The search words are highlighted in the ticker, company, question and finding snippet. While a new search runs, the previous results stay up.
+  - **No match:** a hint and **Start a new research**.
+  - Opening a result works like clicking it in the history.
 - **Jump to bottom (D-84):** while a brief or the welcome screen has more below, a round ↓ button floats at the bottom centre of the scrolling pane, like ChatGPT's; it scrolls smoothly to the end and hides there.
 - **PDF and sharing (D-87, D-91):** `PdfButton` at the top right of a run opens folded sections, sets the page title (the default file name) and calls `window.print()`; `print:` variants hide the header, rails, research bar, actions and inspector, unpin the summary bar and let the brief flow onto pages, and the dark palette applies on screen only (`@media screen and (prefers-color-scheme: dark)`), so the PDF is always light. `SectionActions` (Copy, Share) sit under each findings section and the Summary. Share links open the run where MarketLens runs; the text works anywhere.
 - **Summary last (D-91):** the brief reads Heads up → header → key numbers → price, financials, filings, news → findings → gaps, set aside, sources, method → **Summary** → disclaimer.
 - **Quick guide (D-92):** `GuideButton` opens "Explore MarketLens", a modal with nine topics (start, voice, waiting, reading, verifying, more actions, history, scope, tips) and topic chips; the trigger is a pill at the foot of the right-hand rail (≥1280 px) or "✦ Explore" in the header.
 - **Readable sources (D-86):** `lib/readable.ts` names every source distinctly (calculation type, metric and period, filing form, news publisher) and describes its values in words for the source panel; `naturalize` strips evidence IDs and SEC tag names from any displayed text; the run details list data requests as plain steps ("Fetched daily prices · MSFT · Jul 12 – Oct 12, 2026") with plain failure reasons; no run IDs, hashes or field names are shown.
-- **Badges explain themselves (D-84):** every status, data-mode, statement-type, freshness, fact-check, "default window", "started by voice" and Heads up data tag inside the brief is wrapped in `Hint` (since D-87 only in the brief; the history, summary bar and the rest of the screen have no hover hints): a small ⓘ icon (brighter on hover) and the help cursor show it can be hovered, and hover or keyboard focus shows the definition directly (D-85) (rendered on the page body so scrolling panes never clip it; Esc or scrolling closes it; screen readers get the text as a description). The brief header says so once. The partial status icon is ◐ (it was "!").
+- **Badges explain themselves (D-84):** every status, data-mode, statement-type, freshness, fact-check, "default window" and Heads up data tag inside the brief is wrapped in `Hint` (since D-87 only in the brief; the history, summary bar and the rest of the screen have no hover hints): a small ⓘ icon (brighter on hover) and the help cursor show it can be hovered, and hover or keyboard focus shows the definition directly (D-85) (rendered on the page body so scrolling panes never clip it; Esc or scrolling closes it; screen readers get the text as a description). The brief header says so once. The partial status icon is ◐ (it was "!").
 - **Quick starts:** on wide screens (≥1280 px) a right-hand **Try one of these** rail mirrors the history; it gives way to the evidence inspector while a source is open. On narrower screens the same cards sit on the welcome screen. Picking one fills the research bar without starting anything.
 - **Full text:** the question in the run's summary bar and in the history wraps in full instead of being cut off.
 - **Voice session in the research bar:** the sound-wave button (like ChatGPT's voice mode) starts a two-way voice session (it checks the microphone first) and, while live, turns into a stop button. The assistant is called **Lens** (D-89). Since D-88 the session opens a large voice screen (a dialog over a blurred page) with bars that move with the assistant's voice, the state in large type, the whole conversation (kept scrolled to the newest line, D-89), Mute mic, and a ✕ that ends the session (D-90: the single stop control; the earlier separate End session button and the ✕-to-minimize were merged, because two controls that looked alike did different things). When Lens starts research the history refreshes at once and the run carries a **Voice** tag there (D-90). If Lens says it is checking but no run starts within 15 s, the screen says the research hasn't started (D-89). When the assistant starts research, the run opens behind the screen and its progress card (phases, timer, Cancel) appears inside it; when the run finishes the screen shrinks to a slim bar above the research bar (Expand brings it back) so the brief is visible while the assistant speaks the summary. Audio: playback is unlocked as soon as the room connects, a large "Turn on the assistant's voice" button appears if the browser still blocks it, `RoomAudioRenderer` plays at full volume and stays mounted when the screen is minimized or expanded, and the worker greets only after the browser has joined the room (up to 10 s), so the greeting isn't lost. When voice isn't configured, the sound-wave button is dimmed and pressing it explains how to turn voice on.
 - **Main pane:** shows a welcome screen (with quick starts below 1280 px), or a research run. The choice is kept in the address bar with `history.replaceState` (`/?run=…`), so refresh, back and shared links work without page navigation.
-- **Dialogs:** run details (steps and every MCP tool call), period comparison, and the history in narrower windows. Dialogs render in a portal on the page body, trap focus, close with Esc and return focus to the control that opened them.
-- **Narrower windows:** below 1024 px the history rail becomes a **History** dialog and below 1280 px the quick starts move to the welcome screen and the guide to **✦ Explore** in the header; the research bar stays at the bottom. MarketLens is built for desktop and laptop browsers (D-93).
+- **Dialogs:** run details (steps and every MCP tool call), period comparison, search, and the history in narrower windows. Dialogs render in a portal on the page body, trap focus, close with Esc and return focus to the control that opened them.
+- **Narrower windows:** below 1024 px the history rail becomes a **History** dialog (search moves to a 🔍 button beside it) and below 1280 px the quick starts move to the welcome screen and the guide to **✦ Explore** in the header; the research bar stays at the bottom. MarketLens is built for desktop and laptop browsers (D-93).
 - **Routes:** `/` (with `?run=` and `?symbol=`) and `/research/[runId]`, which opens that run in the same workspace. `/briefs`, `/watchlist` and `/settings` were removed in D-81 and show the not-found page.
 - **Not in the web app (D-81):** saved briefs, the watchlist and the data-status dialog. Their API routes and the workspace MCP server are unchanged.
 
 **Plain-language display (D-78):**
 - **Dates** are formatted naturally ("Jun 30 – Sep 30, 2026"). This is display only: stored claims, evidence and validation are unchanged, and the inspector shows the exact source values.
-- **Heads up card:** run errors are grouped by cause and explained in plain words, with what the reader can do; the error code is kept in a tooltip. Examples: a provider limit, a data gap, a step that fell back, statements the fact-checker set aside.
+- **Heads up card:** run errors are grouped by cause and explained in plain words, with what the reader can do; error codes are not shown. Examples: a provider limit, a data gap, a step that fell back, statements the fact-checker set aside.
 - **Fact-check meter and freshness chips:** a meter shows how many statements were verified, read-with-care or set aside, and how many numbers matched. Chips show what date each data category describes and when it was fetched.
 - **Latest figures only (D-85):** the research-sources server returns financial figures only for the newest reporting period, drops tags the company no longer uses, and withholds periods older than SEC filing deadlines allow; the brief never shows an "out of date" financial figure. Market prices are end-of-day and are flagged only if the provider falls behind.
 - **Folded details:** unknowns are listed plainly. Notes from the AI analysts, statements set aside by the fact-checker, sources and the method fold away. Links to a section inside the brief ("See what was set aside") scroll only the brief, open the folded details and stop below the sticky summary bar; the app's outer frame is `overflow: clip`, so an anchor jump or focus can never shift the whole screen (D-84).
@@ -181,13 +199,14 @@ services/backend/app/
   container.py            wires settings, repositories, the MCP gateway and services
   api/
     health.py             /api/health and /api/data-status (configuration presence only, never secret values)
-    research.py           research create (async), list, get, cancel and re-run
+    research.py           research create (async), list, search (D-96), get, cancel and re-run
+    symbols.py            ticker suggestions for the research bar (MCP `search_symbols`)
     workspace.py          saved briefs and watchlist, through the workspace MCP server
     actions.py            pending writes: propose → preview → confirm (grant + MCP write) or cancel
     compare.py            period comparison
     voice.py              voice sessions and the worker's internal API (hidden from OpenAPI)
     analytics.py          local analytics events and summary
-    middleware.py         request IDs, server-owned session cookie, body-size limit, response headers
+    middleware.py         request IDs, server-owned session cookie (Secure in production), proxy shared secret, body-size limit, response headers
     errors.py             one error envelope: stable code, safe message, request ID, no stack traces
     schemas.py, deps.py   HTTP response contracts (the source of the web types); FastAPI dependencies
   services/
@@ -234,6 +253,7 @@ services/backend/app/
 | `GET /api/data-status` | Data mode, reference clock, provider capabilities per server, latest research per symbol, notices |
 | `POST /api/research` | Validate input and symbol coverage (4xx) and create the run; return 202 with `run_id`. The run executes in the background (D-18) |
 | `GET /api/research` · `GET /api/research/{run_id}` | List runs · one run with its status, stage, steps, tool calls, evidence and brief |
+| `GET /api/research/search?q=&limit=` | Search past runs (D-96). A run matches when every word of `q` (up to 6 words, case-insensitive, `%` and `_` literal) appears in its ticker, company name, question or a kept finding; statements set aside by the fact-checker are not searched. Results are ranked by match location (exact ticker, ticker prefix, company, question, finding) and then by recency, with `matched` set to that location. A `snippet` (about 150 characters, cut at word boundaries) shows the finding containing words the ticker, company and question don't. `q` is 1–100 characters; `limit` defaults to 8 (at most 20) |
 | `POST /api/research/{run_id}/cancel` | Cancel a running run; the cancellation is persisted |
 | `POST /api/research/{run_id}/rerun` | A new linked run (`origin: rerun`, `parent_run_id`) with the same parameters (D-62) |
 | `GET /api/briefs` · `GET /api/briefs/{brief_id}` | Saved snapshots, read through the workspace MCP server |
@@ -248,12 +268,13 @@ services/backend/app/
 
 **Rules that apply to every route:**
 - State-changing requests need the `X-MarketLens-Client` header, a CSRF defense (D-37).
-- The server owns an HTTP-only `SameSite=Lax` session cookie.
+- The server owns an HTTP-only `SameSite=Lax` session cookie, which is also `Secure` with `APP_ENV=production` (D-94).
+- With `PROXY_SHARED_SECRET` set, every `/api` request except `/api/health` and the voice worker's internal API must carry `X-MarketLens-Proxy-Secret`, or it gets a 403. The web app's proxy adds the header (D-94).
 - Request bodies are capped at `MAX_REQUEST_BODY_BYTES` (default 64 KiB) with a 413, streamed bodies included (D-71).
 - CORS allows only `FRONTEND_ORIGIN`.
 - Every error uses the same envelope.
 
-MarketLens is a **local, single-user MVP**: one browser session cookie and no user accounts. Runs, briefs and the watchlist are shared by anyone who can reach the backend, and startup warns when the backend binds to a non-loopback address. Every write still needs server-side validation and a confirmation grant. It is not hardened for public multi-tenant deployment (README › Deployment notes).
+MarketLens is a **single-user MVP**: one browser session cookie and no user accounts. Runs, briefs and the watchlist are shared by anyone who can reach the backend. Locally, startup warns when the backend binds to a non-loopback address. Hosted (D-94), it warns when `APP_ENV=production` has no `PROXY_SHARED_SECRET`, and the site password is one shared login. Every write still needs server-side validation and a confirmation grant. It is not hardened for public multi-tenant deployment (README › Deployment notes).
 
 ### 3.3 Research workflow and agents
 
@@ -294,7 +315,7 @@ Three independent processes on the official MCP Python SDK (2.3.0), over stdio. 
 | Server | Tools | Notes |
 |---|---|---|
 | `market_data` (read-only) | `get_quote`, `get_historical_prices`, `calculate_price_change`, `get_financial_metrics`, `get_provider_status` | Alpha Vantage adapter; Decimal calculations; reports trading days that have no bars |
-| `research_sources` (read-only) | `resolve_symbol`, `search_symbols`, `get_sec_company_facts`, `search_company_filings`, `get_filing_excerpt`, `search_company_news`, `get_research_sources_status` | SEC EDGAR adapter and Alpha Vantage news. Excerpt URLs must belong to the issuer's SEC filings |
+| `research_sources` (read-only) | `resolve_symbol`, `search_symbols`, `get_sec_company_facts`, `search_company_filings`, `get_filing_excerpt`, `search_company_news`, `get_research_sources_status` | SEC EDGAR adapter and Alpha Vantage news, with Yahoo Finance RSS as the live news fallback (D-86). Excerpt URLs must belong to the issuer's SEC filings |
 | `research_workspace` | `list_watchlist`, `list_saved_briefs`, `get_saved_brief`, `create_pending_action`, and the grant-gated writes `save_research_brief`, `add_watchlist_symbol`, `remove_watchlist_symbol` | Validates and consumes a one-time grant and performs the write in one `BEGIN IMMEDIATE` transaction (D-36) |
 
 Contracts are in [`MCP_TOOLS.md`](MCP_TOOLS.md). Every tool declares a description and JSON input and output schemas. It returns a `CallToolResult` whose structured content is the shared result envelope, with `is_error` mirroring `ok` (D-34).
@@ -317,7 +338,7 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
 - **News:** timestamps have no time zone, and are shown as such. `NEWS_SENTIMENT` is a premium endpoint (free keys are refused).
 - **Rate limits (D-40, D-77):**
   - Free keys allow about one request per second and 25 a day. Both read-only MCP servers call Alpha Vantage, so the pacing is **shared across processes**: each request reserves the next slot in the `provider_rate_limits` table inside a `BEGIN IMMEDIATE` transaction. The spacing is twice `60 / ALPHA_VANTAGE_MAX_REQUESTS_PER_MINUTE` seconds (2 s at the default), because a real run still drew a burst rejection at about 1.1 s spacing.
-  - Identical concurrent requests in one process share one upstream call. For example, the price-history and price-change tools need the same daily series, so a typical run now makes three requests (quote, daily prices, news).
+  - Identical concurrent requests in one process share one upstream call. For example, the price-history and price-change tools need the same daily series, so a typical run makes at most three requests (quote, daily prices, news). After the first premium refusal the `research_sources` server stops asking Alpha Vantage for news until it restarts, so later runs on a free key make two.
   - Limit messages are classified as per-second ("burst"), per-minute, daily or unspecified. A burst rejection is retried once after 1.5 s; the daily quota is reported as such ("new requests work again tomorrow") and is not retried.
 
 **SEC EDGAR** (`marketlens_core/providers/sec_edgar.py`):
@@ -426,7 +447,11 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - They use the local toolchain when uv, pnpm and Node are installed, and Docker (`docker-compose.yml`) otherwise.
   - `make start` seeds the demo data unless `.env` selects live data or a real model.
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
-- **Deployment:** `apps/web` deploys to Vercel; the backend and its MCP servers need a long-running container host (`Dockerfile.backend`). The steps are in `docs/DEPLOY_VERCEL.md`.
+- **Deployment (D-94):**
+  - `apps/web` deploys to Vercel (`vercel.json`; the build stops without an https `BACKEND_URL`).
+  - The backend and its MCP servers need a long-running container host: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`.
+  - The voice worker uses `Dockerfile.voice`.
+  - The steps are in `docs/DEPLOY_VERCEL.md`.
 - **`scripts/seed_demo.py`** (D-74): fixture-only, idempotent demo data, created through the public API and the confirmation flow.
 - **`scripts/generate_fixtures.py [--check]`** regenerates the fixture dataset byte for byte.
 - **`scripts/export_openapi.py [--check]`** refreshes the web app's API schema.
@@ -756,8 +781,15 @@ Status on 2026-10-10, with later changes noted (last reviewed 2026-10-12). Evide
 - LiveKit MCP integration: https://docs.livekit.io/agents/logic/tools/mcp/
 - LiveKit voice-agent quickstart: https://docs.livekit.io/agents/start/voice-ai/
 - LiveKit workflows: https://docs.livekit.io/agents/logic/workflows/
+- LiveKit Inference models (voice STT, LLM and TTS IDs): https://docs.livekit.io/agents/models/
 - Official Python MCP SDK: https://py.sdk.modelcontextprotocol.io/
 - Next.js installation/App Router: https://nextjs.org/docs/app/getting-started/installation
+- Next.js Proxy (formerly middleware; `apps/web/proxy.ts`, D-94): https://nextjs.org/docs/app/api-reference/file-conventions/proxy. The version-matched copy ships in `apps/web/node_modules/next/dist/docs/`.
+- Vercel monorepos (Root Directory `apps/web`): https://vercel.com/docs/monorepos
+- Vercel environment variables: https://vercel.com/docs/environment-variables
+- Vercel package managers (built-in pnpm stops at 10, hence the pinned `npx pnpm@12.10.1` in `apps/web/vercel.json`): https://vercel.com/docs/package-managers
+- Render Blueprint specification (`render.yaml`): https://render.com/docs/blueprint-spec
+- Render persistent disks (`/data`; paid instances only, no zero-downtime deploys): https://render.com/docs/disks
 - Alpha Vantage API documentation: https://www.alphavantage.co/documentation/
 - SEC EDGAR APIs: https://www.sec.gov/search-filings/edgar-application-programming-interfaces
 - SEC fair access: https://www.sec.gov/os/accessing-edgar-data

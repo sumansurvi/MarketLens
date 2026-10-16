@@ -1,4 +1,4 @@
-/** Small inline icons used by the research bar. Decorative: buttons carry their own labels. */
+/** Small inline icons for the research bar and search. Decorative: buttons carry their own labels. */
 
 export function MicIcon() {
   return (
@@ -42,4 +42,13 @@ export function ChevronDownIcon({ className = "h-4 w-4" }: { className?: string 
 
 export function StopIcon() {
   return <span aria-hidden="true" className="h-3 w-3 rounded-[3px] bg-current" />;
+}
+
+export function SearchIcon({ className = "h-[18px] w-[18px]" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m20 20-3.5-3.5" />
+    </svg>
+  );
 }

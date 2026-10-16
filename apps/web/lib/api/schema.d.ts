@@ -221,6 +221,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Research
+         * @description Find past research by ticker, company name, question or the text of its kept findings.
+         */
+        get: operations["search_research_api_research_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/{run_id}": {
         parameters: {
             query?: never;
@@ -1299,6 +1319,24 @@ export interface components {
             /** Runs */
             runs: components["schemas"]["ResearchRun"][];
         };
+        /** RunSearchResponse */
+        RunSearchResponse: {
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["RunSearchResult"][];
+        };
+        /** RunSearchResult */
+        RunSearchResult: {
+            /**
+             * Matched
+             * @enum {string}
+             */
+            matched: "ticker" | "company" | "question" | "finding";
+            run: components["schemas"]["ResearchRun"];
+            /** Snippet */
+            snippet: string | null;
+        };
         /**
          * RunStage
          * @enum {string}
@@ -2310,6 +2348,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    search_research_api_research_search_get: {
+        parameters: {
+            query: {
+                q: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunSearchResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

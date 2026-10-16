@@ -27,7 +27,8 @@ A guided five-minute walkthrough is in [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.
 ## What it does
 
 - **One-screen, chat-style workspace:** research history on the left, the brief in the middle, quick starts (**Try one of these**) on the right, and the research bar docked at the bottom like a chat composer, on one line: a ticker dropdown (always listing the company on screen, recent tickers and the largest companies, and searchable by ticker or company name), the question, the time window, a microphone for dictation, a sound-wave button for a voice session, and a send button, like ChatGPT's composer. The bar, the history and each brief's summary bar stay on screen while the brief scrolls, and a floating ↓ button jumps to the end of a long brief. Run details and period comparison open as dialogs, so nothing navigates away, and the address bar keeps the open run (`/?run=…`) for refresh and sharing.
-- **Cited research briefs:** key numbers, price movement with a chart, financial results, filings, dated news, positive and negative evidence, risks, interpretation, conditional scenarios, and the summary at the end (D-91). Dates and values read naturally ("Jun 30 – Sep 30, 2026"). Every claim links to its source, and a source panel beside the brief describes the values, the calculation and its inputs in plain words. A **Share** menu and per-section **Copy / Share** buttons hand the brief on as readable text.
+- **Search your research:** the search icon beside **New research** (or ⌘K / Ctrl+K) opens a search dialog with suggestions as you type. It finds past research by ticker, company name, question or any word in its findings, highlights the matching words, and shows the finding sentence that matched. With an empty box it suggests recent research and the tickers you've researched.
+- **Cited research briefs:** key numbers, price movement with a chart, financial results, filings, dated news, positive and negative evidence, risks, interpretation, conditional scenarios, and the summary at the end (D-91). Dates and values read naturally ("Jun 30 – Sep 30, 2026"). Every claim links to its source, and a source panel beside the brief describes the values, the calculation and its inputs in plain words. A **PDF** button saves the whole brief, and per-section **Copy / Share** buttons hand it on as readable text.
 - **Honest limits, in plain language:** anything that affected a report (a provider limit, a data gap, a statement the fact-checker set aside) appears in a "Heads up" card that says what happened and what you can do. A fact-check meter shows how many statements were verified, and what the brief couldn't establish is listed, never papered over. Inside the brief, every badge (Partial, LIVE DATA, Calculation, a freshness chip…) has a small ⓘ and shows its definition on hover. Every source chip has its own name (Price change, Largest daily drop, Revenue growth (quarter), 10-Q filing · Jul 31…), and the source panel describes values in plain words; no internal IDs, field names or code-style formulas are shown, and statements are cleaned of internal references before they are stored.
 - **Real MCP integration:** three independently runnable MCP servers (stdio) behind an allowlisting client gateway.
 - **Confirmed writes only (API):** saving a brief or changing the watchlist needs a confirmation that issues a one-time, session-bound grant. Model output can never authorize a write. The web app no longer offers these writes (D-81); the API and the workspace MCP server still enforce the rule.
@@ -100,7 +101,7 @@ Everything is configured with environment variables or a git-ignored `.env` (`cp
 | `VOICE_MODE` | `disabled` · `livekit` | `disabled` |
 
 **Live market data** (`APP_MODE=live`, `DATA_MODE=live`):
-- `ALPHA_VANTAGE_API_KEY`: a free key allows 25 requests a day and about one per second. A research run usually needs three (quote, daily prices, news), more when the provider's fundamentals are used as a fallback. Results are cached, so re-runs need fewer.
+- `ALPHA_VANTAGE_API_KEY`: a free key allows 25 requests a day and about one per second. A research run needs at most three (quote, daily prices, news); after the first refusal of news on a free key, later runs need two until the backend restarts, and more when the provider's fundamentals are used as a fallback. Results are cached, so re-runs need fewer.
 - `SEC_USER_AGENT`: the SEC fair-access policy requires a real contact, e.g. `MarketLens/0.1 contact=you@yourdomain.com`.
 - Plan-dependent endpoints that are unavailable (premium adjusted prices) are shown as unavailable; fixtures are never substituted. News, which is premium on Alpha Vantage, falls back to Yahoo Finance's public headline feed (see Data providers).
 
@@ -186,6 +187,7 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 - **Startup says the configuration is invalid:** read the listed problems. For example, `APP_MODE=demo` refuses live data or a live LLM, and `DATA_MODE=live` needs `ALPHA_VANTAGE_API_KEY` and a real `SEC_USER_AGENT`.
 - **"The MarketLens backend is not reachable":** start the backend (or `scripts/dev.py`), and check that `BACKEND_URL` matches its port.
+- **Hydration warning naming `data-gr-…` or other unknown attributes:** a browser extension (Grammarly, a password manager, a translator) changed the page before it loaded. `<html>` and `<body>` ignore such attributes (D-95). If the warning names an element inside the app, it is a real bug: please report it.
 - **Port already in use:** usually MarketLens is already running, for example from `make start` in the background. Run `make status` to check and `make stop` to stop it, then start again; to restart with new `.env` settings, `make restart`. If something else holds the ports, use `scripts/dev.py --api-port 8001 --web-port 3001` (or `make start WEB_PORT=3001 API_PORT=8001`). If Next.js reports "Another next dev server is already running", stop that process first.
 - **A category shows as unavailable or failed:** that is the provider's real answer (plan limits, rate limits, timeouts). The report stays partial with the reason; nothing is filled in.
 - **"The data provider asked us to slow down":** Alpha Vantage briefly limited requests. Wait a minute and press **Try again**; fetched data is cached. **"Daily data allowance used up":** the free key's 25 requests for today are used; cached data keeps working and new requests work again tomorrow.
@@ -210,23 +212,27 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 ## Deployment notes
 
-**Vercel:** the web app deploys to Vercel and the backend to any container host (`Dockerfile.backend`); see [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md).
+**Go live (Vercel + Render):**
+- The web app (`apps/web`) deploys to **Vercel**. Set Root Directory `apps/web`, `BACKEND_URL` and `PROXY_SHARED_SECRET`, and optionally `SITE_PASSWORD`.
+- The backend deploys to **Render** from [`render.yaml`](render.yaml) (`Dockerfile.backend`, a disk at `/data`, demo mode, a generated `PROXY_SHARED_SECRET`), or to any other container host.
+- The optional voice worker runs as a background worker from `Dockerfile.voice`.
+
+The step-by-step guide is [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md). The hosted site can sit behind a password (`SITE_PASSWORD`). The backend answers only your web app (`PROXY_SHARED_SECRET`, added server-side by `apps/web/proxy.ts`), and the session cookie is `Secure` (`APP_ENV=production`). It is still one shared workspace with no user accounts.
 
 **Make and Docker:** `make start`, `make stop`, `make status`, `make run`, `make test` and `make evaluate` use the local toolchain, or Docker (`docker-compose.yml`) when uv, pnpm or Node are missing. Locally, `make start` and `make run` also start the voice worker when `.env` has `VOICE_MODE=livekit` (the Docker setup has no voice worker). Run `make help`.
 
-MarketLens is a **local, single-user MVP**: one browser session cookie, no user accounts, SQLite, and a backend bound to 127.0.0.1 (startup warns if it is not). Docker is not required. To run it as written, use the quickstart or production-style build above on a single machine.
+MarketLens is a **single-user MVP**: one browser session cookie, no user accounts and SQLite. Locally the backend binds to 127.0.0.1 (startup warns if it is not), and Docker is not required. The hosted setup above adds a site password, a backend shared secret and `Secure` cookies, which is enough for a demo or a small group you trust.
 
-A shared or public deployment is a separate project. It would need at least:
+A public multi-user service is a separate project. It would need at least:
 
 - **Access and data:**
-  - authentication and per-user data isolation (runs, briefs and the watchlist are global today);
-  - HTTPS and `Secure` cookies;
+  - user accounts and per-user data isolation (runs, briefs and the watchlist are global today; the site password is one shared login);
   - a managed database (e.g. Postgres) instead of SQLite, with migrations run by a release step.
 - **Infrastructure:**
   - secrets in a secrets manager, with key rotation;
   - per-user rate limits and quotas, abuse protection, and stricter CORS and CSP;
   - the MCP servers as supervised services (stdio per backend process today, or Streamable HTTP with authentication);
-  - the voice worker deployed as a LiveKit agent (`marketlens-voice-agent start` or LiveKit Cloud agents).
+  - the voice worker scaled out (today one `Dockerfile.voice` worker, `marketlens-voice-agent start`).
 - **Operations and compliance:**
   - observability (structured logs, traces, alerting) and a retention/deletion policy;
   - a review of the Alpha Vantage, SEC and LiveKit terms for the intended audience.

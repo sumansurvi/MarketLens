@@ -1,6 +1,6 @@
 # MarketLens — Agent Design and Voice UX
 
-> **As built (reviewed 2026-10-12).** This design is kept as written; the implementation follows it, with these additions: the voice assistant is named **Lens** and its instructions require starting research in the same turn as the ticker confirmation (D-89); the §7 states are shown on a large voice screen with the research progress inside it, which shrinks to a bar when the brief is ready, and ✕ ends the session (D-88 to D-90); dictation (speech to text, no voice reply) is a separate microphone in the research bar (D-83). See [`architecture.md`](architecture.md) §3.7.
+> **As built (reviewed 2026-10-13).** This design is kept as written; the implementation follows it, with these additions and differences: Lens has exactly three tools, `run_company_research`, `get_research_run_status` and `get_brief_summary` (no `search_saved_briefs`, D-57), and since D-81 it says MarketLens doesn't save briefs or track companies, so there is no pending-action screen for voice; the voice assistant is named **Lens** and its instructions require starting research in the same turn as the ticker confirmation (D-89); the §7 states are shown on a large voice screen with the research progress inside it, which shrinks to a bar when the brief is ready, and ✕ ends the session (D-88 to D-90); dictation (speech to text, no voice reply) is a separate microphone in the research bar (D-83). Hosted, the worker runs from `Dockerfile.voice` (D-94, §8). See [`architecture.md`](architecture.md) §3.7.
 
 ## 1. Design goals
 
@@ -199,6 +199,7 @@ Requirements:
 - Prefer `MCPToolset` with stable server/toolset IDs if the voice agent needs direct MCP tools. The recommended architecture may instead expose a narrow `run_company_research` function tool which calls `ResearchWorkflowService`; this is acceptable because the shared service itself uses a real MCP client to call the independent MCP servers. Do not expose both duplicated paths without reason.
 - Ensure the configured voice model/tool interface supports the needed tool calls. If using separate STT/LLM/TTS, keep each provider adapter configurable and document every required key. If using a realtime model, verify tool-call/event behavior against current docs.
 - If LiveKit is not configured, the API health route reports `voice_enabled: false` and the frontend displays setup instructions. Do not fake a voice animation while routing audio nowhere.
+- Hosted (D-94): the worker runs from `Dockerfile.voice` as a background worker (`marketlens-voice-agent start`) and reaches the backend at `VOICE_BACKEND_URL`. The internal voice API is exempt from the backend's `PROXY_SHARED_SECRET` because it has its own token, derived from the LiveKit secret. See `docs/DEPLOY_VERCEL.md` §5.
 
 ## 9. Prompt injection and untrusted data
 

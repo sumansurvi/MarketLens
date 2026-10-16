@@ -44,12 +44,18 @@ export function Modal({
   description,
   onClose,
   size = "lg",
+  placement = "center",
+  initialFocus,
   children,
 }: {
   title: React.ReactNode;
   description?: React.ReactNode;
   onClose: () => void;
   size?: keyof typeof SIZES;
+  /** "top" keeps the dialog's top edge still while its content grows (search results). */
+  placement?: "center" | "top";
+  /** Focused when the dialog opens, instead of the dialog itself. */
+  initialFocus?: React.RefObject<HTMLElement | null>;
   children: React.ReactNode;
 }) {
   const titleId = useId();
@@ -61,9 +67,9 @@ export function Modal({
   useEffect(() => {
     if (!client) return;
     const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    dialogRef.current?.focus();
+    (initialFocus?.current ?? dialogRef.current)?.focus();
     return () => opener?.focus();
-  }, [client]);
+  }, [client, initialFocus]);
 
   function onKeyDown(event: React.KeyboardEvent<HTMLDivElement>) {
     if (event.key === "Escape") {
@@ -89,7 +95,10 @@ export function Modal({
   if (!client) return null;
   return createPortal(
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-black/45 backdrop-blur-[2px] sm:items-center sm:p-6"
+      className={cn(
+        "fixed inset-0 z-40 flex items-end justify-center bg-black/45 backdrop-blur-[2px] sm:p-6",
+        placement === "top" ? "sm:items-start sm:pt-[12vh]" : "sm:items-center",
+      )}
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
@@ -104,6 +113,7 @@ export function Modal({
         onKeyDown={onKeyDown}
         className={cn(
           "flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-2xl outline-none sm:rounded-2xl",
+          placement === "top" && "sm:max-h-[80dvh]",
           SIZES[size],
         )}
       >

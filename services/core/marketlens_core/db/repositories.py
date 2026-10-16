@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import sqlite3
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, Literal
 
 from marketlens_core.db.connection import Database
 from marketlens_core.models import (
@@ -36,6 +38,48 @@ def _ts(value: dt.datetime | None) -> str | None:
 
 def _dt(value: str | None) -> dt.datetime | None:
     return parse_iso_datetime(value) if value else None
+
+
+SearchField = Literal["ticker", "company", "question", "finding"]
+_FIELD_RANK: dict[str, int] = {"ticker": 1, "company": 2, "question": 3, "finding": 4}
+_SNIPPET_CHARS = 150
+
+
+@dataclass(frozen=True)
+class RunSearchHit:
+    run: ResearchRun
+    matched: SearchField
+    snippet: str | None
+
+
+def _search_terms(query: str) -> list[str]:
+    """Lower-cased words of a search query: at most 6, each at most 40 characters, no repeats."""
+    terms: list[str] = []
+    for word in query.lower().split():
+        word = word[:40]
+        if word not in terms:
+            terms.append(word)
+    return terms[:6]
+
+
+def _escape_like(term: str) -> str:
+    return term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
+def _snippet(text: str, term: str) -> str:
+    """About 150 characters of ``text`` around the first occurrence of ``term``, cut at word boundaries."""
+    at = text.lower().find(term)
+    if len(text) <= _SNIPPET_CHARS or at < 0:
+        return text if len(text) <= _SNIPPET_CHARS else text[:_SNIPPET_CHARS].rsplit(" ", 1)[0] + "…"
+    start = max(0, at - 50)
+    end = min(len(text), start + _SNIPPET_CHARS)
+    start = max(0, end - _SNIPPET_CHARS)
+    piece = text[start:end]
+    if start > 0:
+        piece = "…" + re.sub(r"^\S*\s", "", piece, count=1)
+    if end < len(text):
+        piece = re.sub(r"\s\S*$", "", piece, count=1) + "…"
+    return piece
 
 
 def _json(value: Any) -> str:
@@ -140,6 +184,66 @@ class RunRepository:
         with self.db.read() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._run(r) for r in rows]
+
+    def search_runs(self, query: str, *, limit: int = 8) -> list[RunSearchHit]:
+        """Runs whose ticker, company name, question or kept findings contain every word of ``query``.
+
+        Ranked by where the match is (exact ticker, ticker prefix, company name, question, findings),
+        newest first within a rank. Statements set aside by the fact-checker are not searched. A
+        finding snippet is returned for words the ticker, company and question don't contain.
+        """
+        terms = _search_terms(query)
+        if not terms:
+            return []
+        conditions: list[str] = []
+        params: list[Any] = []
+        for term in terms:
+            conditions.append(
+                "(r.symbol LIKE ? ESCAPE '\\' OR json_extract(r.company_json, '$.company_name') LIKE ? ESCAPE '\\' "
+                "OR r.question LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM research_claims c WHERE c.run_id = r.run_id "
+                "AND c.withheld = 0 AND c.text LIKE ? ESCAPE '\\'))"
+            )
+            params.extend([f"%{_escape_like(term)}%"] * 4)
+        sql = f"SELECT r.* FROM research_runs r WHERE {' AND '.join(conditions)} ORDER BY r.created_at DESC LIMIT 200"  # noqa: S608 - fixed SQL fragments; terms are bound parameters
+        with self.db.read() as conn:
+            rows = conn.execute(sql, params).fetchall()
+            ids = [r["run_id"] for r in rows]
+            claims: dict[str, list[str]] = {}
+            if ids:
+                marks = ",".join("?" * len(ids))
+                for c in conn.execute(
+                    f"SELECT run_id, text FROM research_claims WHERE withheld = 0 AND run_id IN ({marks})",  # noqa: S608 - placeholders only
+                    ids,
+                ):
+                    claims.setdefault(c["run_id"], []).append(c["text"])
+
+        hits: list[tuple[int, RunSearchHit]] = []
+        for row in rows:
+            run = self._run(row)
+            symbol = run.symbol.lower()
+            company = ((run.company.company_name or "") if run.company else "").lower()
+            question = run.question.lower()
+            if symbol in terms:
+                rank, matched = 0, "ticker"
+            elif any(symbol.startswith(t) for t in terms):
+                rank, matched = _FIELD_RANK["ticker"], "ticker"
+            elif any(t in company for t in terms):
+                rank, matched = _FIELD_RANK["company"], "company"
+            elif any(t in question for t in terms):
+                rank, matched = _FIELD_RANK["question"], "question"
+            else:
+                rank, matched = _FIELD_RANK["finding"], "finding"
+            remaining = [t for t in terms if t not in symbol and t not in company and t not in question]
+            snippet = None
+            if remaining:
+                texts = claims.get(run.run_id, [])
+                best = max(texts, key=lambda text: sum(t in text.lower() for t in remaining), default=None)
+                if best is not None:
+                    first = next((t for t in remaining if t in best.lower()), remaining[0])
+                    snippet = _snippet(best, first)
+            hits.append((rank, RunSearchHit(run=run, matched=matched, snippet=snippet)))
+        hits.sort(key=lambda item: item[0])  # stable: newest first within a rank
+        return [hit for _, hit in hits[: max(1, min(limit, 20))]]
 
     def latest_run_times(self) -> dict[str, dt.datetime]:
         with self.db.read() as conn:
