@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from marketlens_core.actions import ActionService, action_payload, brief_hash_for_run, payload_hash_of
 from marketlens_core.config import Settings
-from marketlens_core.db import Database, initialize_database
+from marketlens_core.db import AnyDatabase, initialize_database, open_database
 from marketlens_core.db.repositories import WorkspaceRepository
 from marketlens_core.errors import ErrorCode, MarketLensError
 from marketlens_core.hashing import new_id
@@ -35,7 +35,7 @@ SERVER_ID = "research_workspace"
 
 
 class WorkspaceService:
-    def __init__(self, settings: Settings, db: Database) -> None:
+    def __init__(self, settings: Settings, db: AnyDatabase) -> None:
         self.db = db
         self.repo = WorkspaceRepository(db)
         self.actions = ActionService(db, action_ttl_seconds=settings.action_confirmation_ttl_seconds)
@@ -211,6 +211,6 @@ class WorkspaceService:
 
 
 def build_workspace_service(settings: Settings) -> WorkspaceService:
-    db = Database(settings.database_path)
+    db = open_database(settings)
     initialize_database(db)
     return WorkspaceService(settings, db)

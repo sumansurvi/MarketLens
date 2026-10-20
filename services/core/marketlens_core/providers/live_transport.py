@@ -25,7 +25,7 @@ from typing import Any
 import httpx2
 
 from marketlens_core.config import Settings
-from marketlens_core.db.connection import Database
+from marketlens_core.db.connection import AnyDatabase
 from marketlens_core.errors import ErrorCode, MarketLensError
 from marketlens_core.models import SourceMode
 from marketlens_core.providers.alpha_vantage import classify_message
@@ -71,7 +71,7 @@ class SharedRateLimiter:
     process-local spacing.
     """
 
-    def __init__(self, db: Database | None, provider: str, interval: float) -> None:
+    def __init__(self, db: AnyDatabase | None, provider: str, interval: float) -> None:
         self.db = db
         self.provider = provider
         self.interval = interval
@@ -105,7 +105,7 @@ class SharedRateLimiter:
 class ProviderCache:
     """TTL cache in the ``provider_cache`` table; disabled when no database is given."""
 
-    def __init__(self, db: Database | None) -> None:
+    def __init__(self, db: AnyDatabase | None) -> None:
         self.db = db
 
     def get(self, key: str) -> tuple[Any, dt.datetime] | None:

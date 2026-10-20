@@ -27,7 +27,7 @@ from marketlens_core.voice import ROOM_NAME_RE, ROOM_PREFIX
 
 from app.services import voice_summary
 from app.services.research_workflow import ResearchWorkflowService
-from app.services.run_manager import RunManager
+from app.services.run_manager import QueueRunManager, RunManager
 
 logger = logging.getLogger("marketlens.voice")
 MAX_SESSIONS_PER_WINDOW = 6
@@ -53,7 +53,7 @@ class VoiceService:
         sessions: VoiceSessionRepository,
         runs: RunRepository,
         workflow: ResearchWorkflowService,
-        run_manager: RunManager,
+        run_manager: RunManager | QueueRunManager,
         analytics: AnalyticsRepository | None = None,
     ) -> None:
         self.settings = settings
@@ -179,7 +179,7 @@ class VoiceService:
         )
         run = await self.workflow.create_run(request, session_hash=record.session_hash, origin="voice")
         if run.status.value == "queued":
-            self.run_manager.start(run.run_id)
+            await self.run_manager.start(run.run_id)
         self.sessions.set_active_run(room_name, run.run_id)
         return run, False
 

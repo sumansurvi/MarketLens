@@ -5,10 +5,13 @@ Next.js 16 (App Router, TypeScript, Tailwind 4) client for MarketLens. See the r
 backend at `BACKEND_URL` (default `http://127.0.0.1:8000`). The app never holds API keys.
 
 - `pnpm dev` / `pnpm build` / `pnpm lint` / `pnpm typecheck`
-- Deploys to Vercel with Root Directory `apps/web` (`vercel.json`). `proxy.ts` (Next 16's renamed
-  middleware) can ask for a site password (`SITE_PASSWORD`), and adds the backend shared secret
-  (`PROXY_SHARED_SECRET`) to `/api` requests server-side. Both are unset locally. See
-  `docs/DEPLOY_VERCEL.md` (D-94).
+- On Vercel this is the `web` service in the repository's root `vercel.json` (D-98).
+  `app/api/[...path]/route.ts` forwards `/api/*` to `BACKEND_URL` when a request arrives. On
+  Vercel that variable comes from the binding to the internal `backend` service; locally it
+  defaults to `http://127.0.0.1:8000`.
+- `proxy.ts` (Next 16's renamed middleware) can ask for a site password (`SITE_PASSWORD`). It can
+  also add a backend shared secret (`PROXY_SHARED_SECRET`, only for a backend with a public
+  address, D-94). Both are unset locally. See `docs/DEPLOY_VERCEL.md`.
 - `pnpm gen:api` regenerates `lib/api/schema.d.ts` from `openapi.json`
   (export it with `uv run python scripts/export_openapi.py` at the repo root).
 
@@ -27,4 +30,4 @@ backend at `BACKEND_URL` (default `http://127.0.0.1:8000`). The app never holds 
 
 Rules the UI follows: no internal IDs, field names or codes on screen; hover hints only inside the
 brief; every source chip has a distinct name; nothing navigates away from the one screen. Design
-decisions are recorded as D-78, D-81 to D-93, D-95 and D-96 in `PROJECT_STATUS.md`.
+decisions are recorded as D-78, D-81 to D-93, D-95, D-96 and D-98 in `PROJECT_STATUS.md`.

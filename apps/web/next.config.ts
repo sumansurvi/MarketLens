@@ -1,17 +1,9 @@
 import type { NextConfig } from "next";
 
-// The browser only ever calls same-origin /api/*; Next.js proxies it to the FastAPI
-// backend (decision D-06). BACKEND_URL is server-side configuration, never a secret,
-// and never needed by client code.
-const backendUrl = (process.env.BACKEND_URL ?? "http://127.0.0.1:8000").replace(/\/$/, "");
-
-// On Vercel the backend cannot be on localhost: fail the build with a clear message instead of
-// shipping a site whose /api calls all fail. (The rewrite is fixed at build time.)
-if (process.env.VERCEL && !/^https:\/\//.test(process.env.BACKEND_URL ?? "")) {
-  throw new Error(
-    "BACKEND_URL must be set to the public https URL of the MarketLens backend (Vercel project > Settings > Environment Variables). See docs/DEPLOY_VERCEL.md.",
-  );
-}
+// The browser only ever calls same-origin /api/*, which app/api/[...path]/route.ts forwards to the
+// FastAPI backend at request time (decisions D-06, D-98). BACKEND_URL is server-side
+// configuration, never a secret, and never needed by client code. On Vercel it comes from the
+// backend service binding, which exists only at runtime, so nothing here depends on it.
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
@@ -24,9 +16,6 @@ const nextConfig: NextConfig = {
         as: "*.css",
       },
     },
-  },
-  async rewrites() {
-    return [{ source: "/api/:path*", destination: `${backendUrl}/api/:path*` }];
   },
   async headers() {
     return [

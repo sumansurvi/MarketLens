@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from app.main import create_app
 from marketlens_core.config import Settings
-from marketlens_core.db import Database
+from marketlens_core.db import open_database
 from starlette.testclient import TestClient
 
 from tests.helpers import wait_for_run
@@ -19,8 +19,12 @@ def completed_run(client) -> str:
 
 
 def count(settings: Settings, table: str) -> int:
-    with Database(settings.database_path).read() as conn:
-        return conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]  # noqa: S608 - fixed table names
+    db = open_database(settings)  # SQLite or Postgres, whichever the test runs on
+    try:
+        with db.read() as conn:
+            return conn.execute(f"SELECT count(*) AS n FROM {table}").fetchone()["n"]  # noqa: S608 - fixed table names
+    finally:
+        db.close()
 
 
 def test_save_brief_requires_explicit_confirmation(client, settings) -> None:
@@ -57,11 +61,13 @@ def test_other_sessions_cannot_see_or_confirm(client, settings) -> None:
 
 def test_expired_and_cancelled_actions_cannot_write(client, settings) -> None:
     expired = client.post("/api/watchlist", json={"symbol": "NVDA"}).json()["action"]
-    with Database(settings.database_path).write() as conn:
+    db = open_database(settings)
+    with db.write() as conn:
         conn.execute(
             "UPDATE pending_actions SET expires_at = '2000-01-01T00:00:00Z' WHERE action_id = ?",
             (expired["action_id"],),
         )
+    db.close()
     response = client.post(f"/api/actions/{expired['action_id']}/confirm")
     assert response.status_code == 410 and response.json()["error"]["code"] == "CONFIRMATION_EXPIRED"
     cancelled = client.post("/api/watchlist", json={"symbol": "NVDA"}).json()["action"]

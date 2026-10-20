@@ -2,7 +2,8 @@
 
 Migrations are ``NNNN_name.sql`` files applied in order and recorded in
 ``schema_migrations``. Applying is idempotent; a database newer than the code is
-reported rather than modified.
+reported rather than modified. SQLite uses ``migrations/``; Postgres uses
+``migrations_postgres/`` with the same version numbers (D-98).
 """
 
 from __future__ import annotations
@@ -10,15 +11,19 @@ from __future__ import annotations
 import re
 from importlib import resources
 
-from marketlens_core.db.connection import Database
+from marketlens_core.db.connection import AnyDatabase, Database, PostgresDatabase
 from marketlens_core.errors import ErrorCode, MarketLensError
 from marketlens_core.timeutil import iso_z, utc_now
 
 _NAME = re.compile(r"^(\d{4})_([a-z0-9_]+)\.sql$")
 
 
-def available_migrations() -> list[tuple[int, str, str]]:
-    folder = resources.files("marketlens_core.db") / "migrations"
+# Arbitrary constant: serializes migrations across processes and serverless instances (Postgres).
+MIGRATION_LOCK_KEY = 726_311_002
+
+
+def available_migrations(dialect: str = "sqlite") -> list[tuple[int, str, str]]:
+    folder = resources.files("marketlens_core.db") / ("migrations_postgres" if dialect == "postgres" else "migrations")
     found = []
     for entry in folder.iterdir():
         match = _NAME.match(entry.name)
@@ -27,8 +32,49 @@ def available_migrations() -> list[tuple[int, str, str]]:
     return sorted(found)
 
 
-def initialize_database(db: Database) -> list[int]:
+def initialize_database(db: AnyDatabase) -> list[int]:
     """Apply pending migrations; returns the versions applied in this call."""
+    if isinstance(db, PostgresDatabase):
+        return _initialize_postgres(db)
+    return _initialize_sqlite(db)
+
+
+def _check_known(done: set[int], migrations: list[tuple[int, str, str]]) -> None:
+    unknown = sorted(done - {version for version, _, _ in migrations})
+    if unknown:
+        raise MarketLensError(
+            ErrorCode.PERSISTENCE_ERROR,
+            f"The database has schema versions {unknown} that this code does not know. "
+            "Use a newer MarketLens build or restore a backup; the database was not modified.",
+        )
+
+
+def _initialize_postgres(db: PostgresDatabase) -> list[int]:
+    """All pending migrations in one transaction, under an advisory lock (DDL is transactional)."""
+    applied_now: list[int] = []
+    migrations = available_migrations("postgres")
+    with db.write() as conn:
+        conn.execute("SELECT pg_advisory_xact_lock(?)", (MIGRATION_LOCK_KEY,))
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS schema_migrations ("
+            "version INTEGER PRIMARY KEY, name TEXT NOT NULL, applied_at TEXT NOT NULL)"
+        )
+        done = {row["version"] for row in conn.execute("SELECT version FROM schema_migrations").fetchall()}
+        _check_known(done, migrations)
+        for version, name, sql in migrations:
+            if version in done:
+                continue
+            for statement in _split_statements(sql):
+                conn.execute(statement)
+            conn.execute(
+                "INSERT INTO schema_migrations(version, name, applied_at) VALUES (?, ?, ?)",
+                (version, name, iso_z(utc_now())),
+            )
+            applied_now.append(version)
+    return applied_now
+
+
+def _initialize_sqlite(db: Database) -> list[int]:
     applied_now: list[int] = []
     conn = db.connect()
     try:
@@ -39,14 +85,7 @@ def initialize_database(db: Database) -> list[int]:
         )
         done = {row[0] for row in conn.execute("SELECT version FROM schema_migrations")}
         migrations = available_migrations()
-        known = {version for version, _, _ in migrations}
-        unknown = sorted(done - known)
-        if unknown:
-            raise MarketLensError(
-                ErrorCode.PERSISTENCE_ERROR,
-                f"The database has schema versions {unknown} that this code does not know. "
-                "Use a newer MarketLens build or restore a backup; the database was not modified.",
-            )
+        _check_known(done, migrations)
         for version, name, sql in migrations:
             if version in done:
                 continue

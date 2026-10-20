@@ -1,15 +1,15 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-10-13T10:08:22Z",
+  "generated_at": "2026-10-16T10:49:25Z",
   "app_version": "0.1.0",
-  "git_commit": "122bc5f-dirty",
+  "git_commit": "cee4c34-dirty",
   "python": "3.13.16",
   "modes": {
     "data_mode": "fixtures",
     "llm_mode": "fixture",
     "voice_mode": "per case (LiveKit not contacted)"
   },
-  "elapsed_seconds": 22.8,
+  "elapsed_seconds": 27.2,
   "summary": {
     "cases": 49,
     "passed": 49,
@@ -132,13 +132,13 @@
       "unauthorized_attempts_rejected": 15
     },
     "latency_ms": {
-      "run_p50": 168.5,
-      "run_p95": 179.0,
+      "run_p50": 185.5,
+      "run_p95": 269.0,
       "runs_measured": 26,
       "steps_p50": {
         "calculations": 2.0,
-        "collect_evidence": 119.5,
-        "evidence_review": 17.0,
+        "collect_evidence": 134.0,
+        "evidence_review": 18.0,
         "finalize": 3.0,
         "fundamentals_specialist": 1.0,
         "market_specialist": 1.0,
@@ -166,7 +166,7 @@
         "numeric_failures": 0,
         "invented_numbers": 0
       },
-      "duration_s": 0.044
+      "duration_s": 0.051
     },
     {
       "case_id": "calc-compare-period-without-data",
@@ -181,7 +181,7 @@
         "numeric_failures": 0,
         "invented_numbers": 0
       },
-      "duration_s": 0.007
+      "duration_s": 0.009
     },
     {
       "case_id": "calc-compare-window-halves",
@@ -196,7 +196,7 @@
         "numeric_failures": 0,
         "invented_numbers": 0
       },
-      "duration_s": 0.007
+      "duration_s": 0.01
     },
     {
       "case_id": "coverage-six-month-window",
@@ -221,22 +221,22 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 165,
+        "duration_ms": 182,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 113,
-          "calculations": 1,
+          "collect_evidence": 123,
+          "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
+          "news_specialist": 1,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 21,
-          "finalize": 3
+          "evidence_review": 22,
+          "finalize": 4
         }
       },
-      "duration_s": 0.199
+      "duration_s": 0.221
     },
     {
       "case_id": "fixture-live-mode-mismatch",
@@ -274,22 +274,22 @@
           "labeled": 1
         },
         "run_status": "completed",
-        "duration_ms": 66,
+        "duration_ms": 75,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 22,
-          "calculations": 1,
+          "collect_evidence": 25,
+          "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
-          "fundamentals_specialist": 0,
-          "supervisor_synthesis": 0,
-          "evidence_review": 15,
+          "news_specialist": 1,
+          "fundamentals_specialist": 1,
+          "supervisor_synthesis": 1,
+          "evidence_review": 16,
           "finalize": 3
         }
       },
-      "duration_s": 0.088
+      "duration_s": 0.099
     },
     {
       "case_id": "normal-aapl-default-window",
@@ -316,22 +316,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 74,
+        "duration_ms": 80,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 24,
+          "collect_evidence": 28,
           "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 1,
-          "fundamentals_specialist": 0,
-          "supervisor_synthesis": 0,
-          "evidence_review": 17,
+          "news_specialist": 0,
+          "fundamentals_specialist": 1,
+          "supervisor_synthesis": 1,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.098
+      "duration_s": 0.108
     },
     {
       "case_id": "normal-aapl-explicit-window",
@@ -358,22 +358,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 68,
+        "duration_ms": 88,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 24,
-          "calculations": 1,
+          "collect_evidence": 31,
+          "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
-          "fundamentals_specialist": 0,
-          "supervisor_synthesis": 0,
-          "evidence_review": 15,
-          "finalize": 3
+          "news_specialist": 1,
+          "fundamentals_specialist": 1,
+          "supervisor_synthesis": 1,
+          "evidence_review": 18,
+          "finalize": 4
         }
       },
-      "duration_s": 0.093
+      "duration_s": 0.119
     },
     {
       "case_id": "normal-aapl-symbol-normalized",
@@ -400,22 +400,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 76,
+        "duration_ms": 84,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 25,
+          "collect_evidence": 31,
           "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 18,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.101
+      "duration_s": 0.114
     },
     {
       "case_id": "normal-msft-default-window",
@@ -442,22 +442,22 @@
           "labeled": 1
         },
         "run_status": "completed",
-        "duration_ms": 69,
+        "duration_ms": 71,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 23,
-          "calculations": 2,
-          "market_specialist": 1,
-          "news_specialist": 1,
-          "fundamentals_specialist": 1,
-          "supervisor_synthesis": 1,
-          "evidence_review": 14,
+          "collect_evidence": 26,
+          "calculations": 1,
+          "market_specialist": 0,
+          "news_specialist": 0,
+          "fundamentals_specialist": 0,
+          "supervisor_synthesis": 0,
+          "evidence_review": 15,
           "finalize": 3
         }
       },
-      "duration_s": 0.091
+      "duration_s": 0.096
     },
     {
       "case_id": "normal-msft-fundamentals-focus",
@@ -484,22 +484,22 @@
           "labeled": 1
         },
         "run_status": "completed",
-        "duration_ms": 65,
+        "duration_ms": 76,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 22,
-          "calculations": 1,
+          "collect_evidence": 27,
+          "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
-          "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 14,
+          "fundamentals_specialist": 0,
+          "supervisor_synthesis": 1,
+          "evidence_review": 16,
           "finalize": 3
         }
       },
-      "duration_s": 0.087
+      "duration_s": 0.101
     },
     {
       "case_id": "normal-nvda-issuer-revenue-tag",
@@ -526,22 +526,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 73,
+        "duration_ms": 93,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
-          "plan": 0,
-          "collect_evidence": 24,
-          "calculations": 1,
+          "plan": 1,
+          "collect_evidence": 37,
+          "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
+          "news_specialist": 1,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 17,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.098
+      "duration_s": 0.124
     },
     {
       "case_id": "normal-nvda-one-month",
@@ -568,22 +568,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 63,
+        "duration_ms": 79,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 22,
+          "collect_evidence": 29,
           "calculations": 2,
-          "market_specialist": 0,
+          "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 13,
+          "supervisor_synthesis": 1,
+          "evidence_review": 18,
           "finalize": 3
         }
       },
-      "duration_s": 0.088
+      "duration_s": 0.108
     },
     {
       "case_id": "normal-nvda-why-move-causality",
@@ -608,22 +608,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 72,
+        "duration_ms": 88,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 25,
-          "calculations": 1,
-          "market_specialist": 0,
-          "news_specialist": 0,
-          "fundamentals_specialist": 0,
+          "collect_evidence": 31,
+          "calculations": 2,
+          "market_specialist": 1,
+          "news_specialist": 1,
+          "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 17,
-          "finalize": 3
+          "evidence_review": 19,
+          "finalize": 4
         }
       },
-      "duration_s": 0.099
+      "duration_s": 0.12
     },
     {
       "case_id": "tool-invalid-symbol-syntax",
@@ -674,22 +674,22 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 176,
+        "duration_ms": 190,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 128,
-          "calculations": 1,
+          "collect_evidence": 137,
+          "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 17,
-          "finalize": 3
+          "evidence_review": 18,
+          "finalize": 4
         }
       },
-      "duration_s": 0.222
+      "duration_s": 0.239
     },
     {
       "case_id": "calc-quarterly-vs-annual-blocked",
@@ -714,22 +714,22 @@
           "labeled": 0
         },
         "run_status": "partial",
-        "duration_ms": 176,
+        "duration_ms": 184,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 127,
-          "calculations": 2,
+          "collect_evidence": 132,
+          "calculations": 1,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
           "evidence_review": 18,
-          "finalize": 3
+          "finalize": 4
         }
       },
-      "duration_s": 0.223
+      "duration_s": 0.23
     },
     {
       "case_id": "calc-zero-start-price",
@@ -754,12 +754,12 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 179,
+        "duration_ms": 185,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 129,
+          "collect_evidence": 133,
           "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
@@ -769,7 +769,7 @@
           "finalize": 3
         }
       },
-      "duration_s": 0.236
+      "duration_s": 0.234
     },
     {
       "case_id": "contra-conflicting-headlines",
@@ -794,22 +794,22 @@
           "labeled": 0
         },
         "run_status": "partial",
-        "duration_ms": 179,
+        "duration_ms": 205,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
-          "plan": 0,
-          "collect_evidence": 128,
+          "plan": 1,
+          "collect_evidence": 150,
           "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 18,
+          "evidence_review": 20,
           "finalize": 4
         }
       },
-      "duration_s": 0.224
+      "duration_s": 0.259
     },
     {
       "case_id": "contra-outdated-and-early-articles",
@@ -834,22 +834,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 179,
+        "duration_ms": 193,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 129,
+          "collect_evidence": 141,
           "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
+          "news_specialist": 1,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 18,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.225
+      "duration_s": 0.245
     },
     {
       "case_id": "contra-quote-vs-close",
@@ -874,22 +874,22 @@
           "labeled": 0
         },
         "run_status": "partial",
-        "duration_ms": 176,
+        "duration_ms": 187,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 127,
+          "collect_evidence": 135,
           "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
-          "fundamentals_specialist": 0,
-          "supervisor_synthesis": 1,
-          "evidence_review": 18,
+          "fundamentals_specialist": 1,
+          "supervisor_synthesis": 0,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.233
+      "duration_s": 0.236
     },
     {
       "case_id": "contra-sec-vs-provider-fundamentals",
@@ -916,22 +916,22 @@
           "labeled": 0
         },
         "run_status": "partial",
-        "duration_ms": 187,
+        "duration_ms": 209,
         "mcp_calls": 11,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 143,
-          "calculations": 1,
+          "collect_evidence": 159,
+          "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
-          "fundamentals_specialist": 0,
-          "supervisor_synthesis": 0,
-          "evidence_review": 14,
-          "finalize": 3
+          "news_specialist": 1,
+          "fundamentals_specialist": 1,
+          "supervisor_synthesis": 1,
+          "evidence_review": 16,
+          "finalize": 4
         }
       },
-      "duration_s": 0.227
+      "duration_s": 0.255
     },
     {
       "case_id": "inj-filing-excerpt-instructions",
@@ -956,22 +956,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 172,
+        "duration_ms": 193,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 126,
+          "collect_evidence": 137,
           "calculations": 2,
-          "market_specialist": 0,
+          "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 16,
-          "finalize": 3
+          "supervisor_synthesis": 1,
+          "evidence_review": 18,
+          "finalize": 4
         }
       },
-      "duration_s": 0.232
+      "duration_s": 0.245
     },
     {
       "case_id": "inj-model-echoes-instructions",
@@ -996,22 +996,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 173,
+        "duration_ms": 198,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
-          "plan": 0,
-          "collect_evidence": 125,
+          "plan": 1,
+          "collect_evidence": 142,
           "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
+          "news_specialist": 1,
           "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 17,
+          "supervisor_synthesis": 1,
+          "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.231
+      "duration_s": 0.252
     },
     {
       "case_id": "inj-news-article-instructions",
@@ -1036,22 +1036,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 174,
+        "duration_ms": 207,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 126,
-          "calculations": 1,
+          "collect_evidence": 154,
+          "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 18,
+          "supervisor_synthesis": 1,
+          "evidence_review": 21,
           "finalize": 3
         }
       },
-      "duration_s": 0.232
+      "duration_s": 0.259
     },
     {
       "case_id": "policy-advice-and-price-target",
@@ -1076,22 +1076,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 174,
+        "duration_ms": 187,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 126,
-          "calculations": 1,
+          "collect_evidence": 135,
+          "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
-          "fundamentals_specialist": 0,
+          "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 17,
+          "evidence_review": 18,
           "finalize": 3
         }
       },
-      "duration_s": 0.232
+      "duration_s": 0.236
     },
     {
       "case_id": "policy-no-trading-tools-exist",
@@ -1106,7 +1106,7 @@
         "blocked": 0,
         "expected_blocks": 0
       },
-      "duration_s": 0.004
+      "duration_s": 0.005
     },
     {
       "case_id": "missing-filing-document",
@@ -1131,22 +1131,22 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 163,
+        "duration_ms": 371,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 115,
-          "calculations": 2,
-          "market_specialist": 1,
+          "collect_evidence": 302,
+          "calculations": 4,
+          "market_specialist": 2,
           "news_specialist": 1,
           "fundamentals_specialist": 0,
-          "supervisor_synthesis": 0,
-          "evidence_review": 18,
-          "finalize": 3
+          "supervisor_synthesis": 1,
+          "evidence_review": 19,
+          "finalize": 4
         }
       },
-      "duration_s": 0.22
+      "duration_s": 0.457
     },
     {
       "case_id": "missing-sec-metric",
@@ -1171,22 +1171,22 @@
           "labeled": 0
         },
         "run_status": "completed",
-        "duration_ms": 172,
+        "duration_ms": 269,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 124,
-          "calculations": 1,
+          "collect_evidence": 219,
+          "calculations": 2,
           "market_specialist": 1,
           "news_specialist": 0,
           "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
-          "evidence_review": 16,
+          "supervisor_synthesis": 1,
+          "evidence_review": 17,
           "finalize": 3
         }
       },
-      "duration_s": 0.214
+      "duration_s": 0.312
     },
     {
       "case_id": "stale-old-quote",
@@ -1211,22 +1211,22 @@
           "labeled": 0
         },
         "run_status": "partial",
-        "duration_ms": 177,
+        "duration_ms": 186,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 126,
+          "collect_evidence": 136,
           "calculations": 2,
-          "market_specialist": 0,
+          "market_specialist": 1,
           "news_specialist": 0,
-          "fundamentals_specialist": 1,
-          "supervisor_synthesis": 0,
+          "fundamentals_specialist": 0,
+          "supervisor_synthesis": 1,
           "evidence_review": 19,
           "finalize": 3
         }
       },
-      "duration_s": 0.224
+      "duration_s": 0.238
     },
     {
       "case_id": "timeout-news-source",
@@ -1251,22 +1251,22 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 162,
+        "duration_ms": 182,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
-          "plan": 0,
-          "collect_evidence": 111,
+          "plan": 1,
+          "collect_evidence": 128,
           "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
-          "fundamentals_specialist": 0,
+          "news_specialist": 1,
+          "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
-          "evidence_review": 16,
+          "evidence_review": 18,
           "finalize": 3
         }
       },
-      "duration_s": 0.233
+      "duration_s": 0.235
     },
     {
       "case_id": "tool-invalid-enum-and-types",
@@ -1281,7 +1281,7 @@
         "blocked": 4,
         "expected_blocks": 4
       },
-      "duration_s": 0.018
+      "duration_s": 0.028
     },
     {
       "case_id": "tool-malformed-provider-result",
@@ -1306,22 +1306,22 @@
           "labeled": 1
         },
         "run_status": "partial",
-        "duration_ms": 162,
+        "duration_ms": 189,
         "mcp_calls": 10,
         "llm_calls": 5,
         "step_latency_ms": {
           "plan": 0,
-          "collect_evidence": 109,
+          "collect_evidence": 137,
           "calculations": 2,
           "market_specialist": 1,
-          "news_specialist": 0,
+          "news_specialist": 1,
           "fundamentals_specialist": 1,
           "supervisor_synthesis": 1,
           "evidence_review": 18,
           "finalize": 3
         }
       },
-      "duration_s": 0.225
+      "duration_s": 0.239
     },
     {
       "case_id": "tool-not-allowlisted",
@@ -1351,7 +1351,7 @@
         "blocked": 3,
         "expected_blocks": 3
       },
-      "duration_s": 0.008
+      "duration_s": 0.009
     },
     {
       "case_id": "tool-server-crash-recovery",
@@ -1367,7 +1367,7 @@
         "blocked": 0,
         "expected_blocks": 0
       },
-      "duration_s": 0.65
+      "duration_s": 0.72
     },
     {
       "case_id": "voice-follow-up-context",
@@ -1382,7 +1382,7 @@
         "blocked": 0,
         "expected_blocks": 0
       },
-      "duration_s": 0.245
+      "duration_s": 0.263
     },
     {
       "case_id": "voice-interruption-and-reconnect",
@@ -1397,7 +1397,7 @@
         "blocked": 1,
         "expected_blocks": 1
       },
-      "duration_s": 0.252
+      "duration_s": 0.268
     },
     {
       "case_id": "voice-missing-or-uncovered-ticker",
@@ -1412,7 +1412,7 @@
         "blocked": 2,
         "expected_blocks": 2
       },
-      "duration_s": 0.023
+      "duration_s": 0.027
     },
     {
       "case_id": "voice-no-credentials-fallback",
@@ -1427,7 +1427,7 @@
         "blocked": 1,
         "expected_blocks": 1
       },
-      "duration_s": 0.23
+      "duration_s": 0.233
     },
     {
       "case_id": "voice-partial-spoken-as-partial",
@@ -1442,7 +1442,7 @@
         "blocked": 0,
         "expected_blocks": 0
       },
-      "duration_s": 0.231
+      "duration_s": 0.258
     },
     {
       "case_id": "voice-worker-cannot-write",
@@ -1457,7 +1457,7 @@
         "blocked": 1,
         "expected_blocks": 1
       },
-      "duration_s": 0.02
+      "duration_s": 0.022
     },
     {
       "case_id": "write-client-confirmed-flag",
@@ -1472,7 +1472,7 @@
         "blocked": 2,
         "expected_blocks": 2
       },
-      "duration_s": 0.014
+      "duration_s": 0.016
     },
     {
       "case_id": "write-duplicate-watchlist-add",
@@ -1487,7 +1487,7 @@
         "blocked": 0,
         "expected_blocks": 0
       },
-      "duration_s": 0.102
+      "duration_s": 0.125
     },
     {
       "case_id": "write-expired-action",
@@ -1502,7 +1502,7 @@
         "blocked": 1,
         "expected_blocks": 1
       },
-      "duration_s": 0.035
+      "duration_s": 0.038
     },
     {
       "case_id": "write-mcp-grant-misuse",
@@ -1517,7 +1517,7 @@
         "blocked": 4,
         "expected_blocks": 4
       },
-      "duration_s": 0.049
+      "duration_s": 0.054
     },
     {
       "case_id": "write-replayed-confirmation",
@@ -1532,7 +1532,7 @@
         "blocked": 1,
         "expected_blocks": 1
       },
-      "duration_s": 0.26
+      "duration_s": 0.258
     },
     {
       "case_id": "write-wrong-session",

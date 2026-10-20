@@ -16,7 +16,7 @@ If you're new to the project, start with [`FEATURES.md`](FEATURES.md): it explai
 - [4. End to end with real data](#4-end-to-end-with-real-data)
 - [5. Failure handling](#5-failure-handling)
 - [6. Voice (optional)](#6-voice-optional)
-- [7. Docker and deployment (optional)](#7-docker-and-deployment-optional)
+- [7. Docker, Postgres and deployment (optional)](#7-docker-postgres-and-deployment-optional)
 - [8. When something looks wrong](#8-when-something-looks-wrong)
 - [9. Reset and clean up](#9-reset-and-clean-up)
 - [10. Record your results](#10-record-your-results)
@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `361 passed, 2 skipped`. The 2 skipped tests are the credential-gated smoke tests in §2 |
+| `make test` | `368 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -273,10 +273,46 @@ The thorough versions of the security checks run automatically in `make test`: e
 
 ---
 
-## 7. Docker and deployment (optional)
+## 7. Docker, Postgres and deployment (optional)
 
 - **Docker:** Docker Desktop must be running. Stop the local app first (`make stop`, since Docker uses the same ports), then run `make start MODE=docker`. The first start builds the image and installs dependencies, which takes several minutes; follow it with `make logs MODE=docker` and stop with `make stop MODE=docker`. This path has **not yet been run on this machine**, so report anything odd. Inside Docker, `127.0.0.1` is the container itself, so to use Ollama on your Mac set `OPENAI_BASE_URL=http://host.docker.internal:11434/v1`. That address is no longer local, so `OPENAI_API_KEY` must then have a value; any placeholder works with Ollama.
-- **Vercel build guard:** `VERCEL=1 pnpm --dir apps/web build` (without `BACKEND_URL`) should stop with "BACKEND_URL must be set to the public https URL of the MarketLens backend…". With `VERCEL=1 BACKEND_URL=https://example.com` the build should succeed and list `ƒ Proxy (Middleware)`. The real deployment steps are in [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md). Afterwards, run `pnpm --dir apps/web build` again so the local production build points at your local backend.
+- **Vercel builds:** `VERCEL=1 pnpm --dir apps/web build` should succeed without any `BACKEND_URL`, and list `ƒ /api/[...path]` (the forwarding route) and `ƒ Proxy (Middleware)`. Since D-98 the backend address is read when a request arrives, not at build time. The real deployment steps are in [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md).
+- **Postgres (D-98), automated:**
+  1. Start a Postgres you can throw away. For example, with Homebrew:
+
+     ```
+     initdb -D /tmp/mlpg -U marketlens --auth=trust
+     pg_ctl -D /tmp/mlpg -o "-p 55432 -c listen_addresses=127.0.0.1" start
+     createdb -h 127.0.0.1 -p 55432 -U marketlens marketlens_test
+     ```
+  2. Run the suite against it: `MARKETLENS_TEST_POSTGRES_URL=postgresql://marketlens@127.0.0.1:55432/marketlens_test uv run pytest -q`. Every test that uses the `settings`/`client` fixtures then runs on a fresh Postgres schema.
+  3. `tests/integration/test_postgres_database.py` also covers what only Postgres needs: migrations, serialized writes, evidence order and error wrapping. Without the variable, those tests are skipped.
+- **Queue mode (D-98), automated:** `uv run pytest tests/integration/test_queue_execution.py` covers:
+  - publishing instead of running;
+  - one execution per run under repeated delivery;
+  - a queue failure;
+  - cancelling before and during a run;
+  - interrupted and stale runs;
+  - the Postgres requirement;
+  - the Vercel Queues SDK delivering a published run to a subscriber (its in-process queue service).
+- **Queue mode, by hand (a local rehearsal of the Vercel setup):**
+  1. `uv run python -m vercel.queue.devserver --port 8790` (the SDK's local Vercel Queues).
+  2. In two more terminals, set:
+
+     ```
+     export DATABASE_URL=postgresql://… VERCEL_QUEUE_BASE_URL=http://127.0.0.1:8790 VERCEL_QUEUE_TOKEN=local VERCEL_REGION=iad1 VERCEL_DEPLOYMENT_ID=dpl_local
+     ```
+
+     Then run the backend as Vercel loads it, `uv run uvicorn vercel_backend.asgi:app --port 8011`, and the consumer, `uv run python scripts/run_queue_consumer.py`.
+  3. Build and start the web app against that backend: `BACKEND_URL=http://127.0.0.1:8011 pnpm --dir apps/web build && BACKEND_URL=http://127.0.0.1:8011 pnpm --dir apps/web start -p 3001`.
+
+  Then open `http://localhost:3001` and check:
+  - a research shows **Queued**, then completes;
+  - the consumer prints `research run …: completed`;
+  - search finds the run;
+  - **Cancel** on a new run works.
+
+  Afterwards, run `pnpm --dir apps/web build` again so the local production build points at your usual backend.
 - **Hosted protections (D-94), automated:** `uv run pytest tests/integration/test_hosted_deployment.py` covers four things:
   - the `Secure` cookie in production;
   - the 403 without `PROXY_SHARED_SECRET`, with `/api/health` and the voice worker's API exempt;
@@ -291,10 +327,11 @@ The thorough versions of the security checks run automatically in `make test`: e
   - `http://localhost:3000` asks for the password;
   - research works after you sign in;
   - `curl localhost:8000/api/data-status` answers 403, and `curl localhost:8000/api/health` answers 200.
-- **After deploying:**
-  - `https://<backend>/api/health` answers 200 and other `/api` addresses 403;
-  - the Vercel address asks for the password and then runs a research;
-  - the cookie `ml_session` shows `Secure` in the browser's developer tools.
+- **After deploying to Vercel (D-98):**
+  - the address asks for the password, then runs a research to completion;
+  - the `backend` logs show `MCP server … ready` and `research run …: completed`;
+  - the cookie `ml_session` shows `Secure` in the browser's developer tools;
+  - the backend has no public address of its own.
 
 ---
 

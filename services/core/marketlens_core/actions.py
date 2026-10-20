@@ -19,7 +19,7 @@ import json
 import sqlite3
 from typing import Any
 
-from marketlens_core.db.connection import Database
+from marketlens_core.db.connection import AnyDatabase
 from marketlens_core.db.repositories import AuditRepository
 from marketlens_core.errors import ErrorCode, MarketLensError
 from marketlens_core.hashing import content_hash, hash_secret, new_id, new_secret_token
@@ -61,7 +61,7 @@ def brief_hash_for_run(conn: sqlite3.Connection, run_id: str) -> tuple[str, str,
 
 
 class ActionService:
-    def __init__(self, db: Database, *, action_ttl_seconds: int) -> None:
+    def __init__(self, db: AnyDatabase, *, action_ttl_seconds: int) -> None:
         self.db = db
         self.action_ttl_seconds = action_ttl_seconds
         self.audit = AuditRepository(db)

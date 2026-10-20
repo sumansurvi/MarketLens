@@ -481,10 +481,10 @@ def build_market_data_service(settings: Settings) -> MarketDataService:
         dataset = FixtureDataset(settings.fixture_root)
         client = av.AlphaVantageClient(FixtureAlphaVantageTransport(dataset), fixture_url_base=dataset.url_base)
         return MarketDataService(settings, client, lambda: reference_clock(settings, dataset), fixture_dataset=dataset)
-    from marketlens_core.db import Database, initialize_database
+    from marketlens_core.db import initialize_database, open_database
     from marketlens_core.providers.live_transport import LiveAlphaVantageTransport, ProviderCache
 
-    db = Database(settings.database_path)
+    db = open_database(settings)
     initialize_database(db)
     client = av.AlphaVantageClient(LiveAlphaVantageTransport(settings, cache=ProviderCache(db)))
     return MarketDataService(settings, client, lambda: reference_clock(settings))

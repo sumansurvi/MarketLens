@@ -20,10 +20,20 @@ dependencies = [
 dev = [
   "pytest>=9.1",
   "ruff>=0.16",
+  # Local stand-in for Vercel Queues in tests and the queue-mode simulation (D-98).
+  "vercel-queue[devserver]>=0.9,<0.10",
 ]
 
 [tool.uv]
 package = false
+
+# Vercel (D-98): the backend service (root ".") loads this FastAPI app, and Vercel Queues invokes
+# the research-run subscriber as a private function. See vercel.json and docs/DEPLOY_VERCEL.md.
+[tool.vercel]
+entrypoint = "vercel_backend.asgi:app"
+
+[[tool.vercel.subscribers]]
+entrypoint = "vercel_backend.queue_consumer"
 
 [tool.uv.workspace]
 members = ["services/*"]

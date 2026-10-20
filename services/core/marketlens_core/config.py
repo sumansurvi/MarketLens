@@ -68,6 +68,13 @@ class Settings(BaseSettings):
     # voice worker's internal API must carry it in X-MarketLens-Proxy-Secret. The web app's proxy
     # adds it server-side, so only the deployed web app can reach the backend.
     proxy_shared_secret: SecretStr | None = None
+    # How research runs execute (D-98). inline: a background task in the backend process (local).
+    # queue: the backend publishes each run to Vercel Queues and a queue-triggered function runs
+    # it, because a Vercel Function can't keep working after it has answered (needs Postgres).
+    run_execution: Literal["inline", "queue"] = "inline"
+    research_queue_topic: str = Field(default="marketlens-research-runs", pattern=r"^[a-z0-9][a-z0-9-]{0,62}$")
+    # Where the MCP servers' logs go. Default: data/runtime/logs. On Vercel only /tmp is writable.
+    mcp_log_dir: str | None = None
 
     # LLM
     openai_api_key: SecretStr | None = None
@@ -131,11 +138,20 @@ class Settings(BaseSettings):
     run_timeout_seconds: float = Field(default=120, gt=5, le=900)
 
     # ------------------------------------------------------------------ derived
+    @property
+    def database_is_postgres(self) -> bool:
+        return self.database_url.startswith(("postgresql://", "postgres://"))
+
     @cached_property
     def database_path(self) -> Path:
+        """The SQLite file (local mode). Postgres URLs have no path; use ``database_url``."""
         prefix = "sqlite:///"
         if not self.database_url.startswith(prefix):
-            raise ConfigError([f"DATABASE_URL must start with '{prefix}' (SQLite only); got a different scheme."])
+            raise ConfigError(
+                [
+                    f"DATABASE_URL must start with '{prefix}' (SQLite) or 'postgresql://' (Postgres); got a different scheme."
+                ]
+            )
         raw = self.database_url[len(prefix) :]
         path = Path(raw)
         return path if path.is_absolute() else (REPO_ROOT / path).resolve()
@@ -213,7 +229,9 @@ class Settings(BaseSettings):
 
     def public_exposure_warnings(self) -> list[str]:
         warnings: list[str] = []
-        if self.app_env == "production" and not self.proxy_secret:
+        # On Vercel Services the backend has no public route (only the web app's binding reaches
+        # it, D-98), so a shared secret adds nothing there.
+        if self.app_env == "production" and not self.proxy_secret and not os.environ.get("VERCEL"):
             warnings.append(
                 "APP_ENV=production without PROXY_SHARED_SECRET: anyone who finds this backend's URL can "
                 "run research on your API keys. Set the same PROXY_SHARED_SECRET here and on the web app."
@@ -300,12 +318,12 @@ def validate_settings(settings: Settings) -> list[str]:
             "VOICE_MODE=livekit requires LIVEKIT_URL, LIVEKIT_API_KEY and LIVEKIT_API_SECRET. "
             "Or set VOICE_MODE=disabled (text research keeps working)."
         )
-    try:
-        db_path = settings.database_path
-        if db_path.exists() and db_path.is_dir():
-            problems.append(f"DATABASE_URL points to a directory ({db_path}); it must be a file path.")
-    except ConfigError as exc:
-        problems.extend(exc.problems)
+    problems.extend(_database_problems(settings))
+    if settings.run_execution == "queue" and not settings.database_is_postgres:
+        problems.append(
+            "RUN_EXECUTION=queue requires a Postgres DATABASE_URL: queue-triggered functions run on other "
+            "instances and can't share a local SQLite file."
+        )
     if settings.is_fixture_data and not (settings.fixture_root / "manifest.json").exists():
         problems.append(
             f"Fixture dataset not found at {settings.fixture_root}. Set FIXTURE_DIR or restore data/fixtures/v1."
@@ -346,8 +364,29 @@ def validate_server_settings(settings: Settings, server_id: str) -> list[str]:
             problems.append(f"{server_id}: DATA_MODE=live requires ALPHA_VANTAGE_API_KEY.")
         if server_id == "research_sources" and not settings.sec_user_agent_configured:
             problems.append("research_sources: DATA_MODE=live requires SEC_USER_AGENT with a real contact.")
-    try:
-        _ = settings.database_path
-    except ConfigError as exc:
-        problems.extend(exc.problems)
+    problems.extend(_database_problems(settings))
     return problems
+
+
+def _database_problems(settings: Settings) -> list[str]:
+    if settings.database_is_postgres:
+        return []
+    try:
+        db_path = settings.database_path
+    except ConfigError as exc:
+        return exc.problems
+    if db_path.exists() and db_path.is_dir():
+        return [f"DATABASE_URL points to a directory ({db_path}); it must be a file path."]
+    return []
+
+
+def mcp_log_directory(settings: Settings) -> Path | None:
+    """Where MCP server logs are written: MCP_LOG_DIR, else data/runtime/logs. ``-``: stderr."""
+    if settings.mcp_log_dir == "-":
+        return None
+    if settings.mcp_log_dir:
+        path = Path(settings.mcp_log_dir)
+        return path if path.is_absolute() else (REPO_ROOT / path).resolve()
+    if settings.database_is_postgres:
+        return REPO_ROOT / "data" / "runtime" / "logs"
+    return settings.database_path.parent / "runtime" / "logs"

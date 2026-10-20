@@ -4,9 +4,9 @@
 **Primary interaction:** Text, plus optional browser voice  
 **Market-data sources:** deterministic synthetic fixtures (default) · Alpha Vantage (optional, plan-dependent) · SEC EDGAR public data · Yahoo Finance headline RSS (news fallback)  
 **Implementation languages:** TypeScript (Next.js web app) and Python (backend, MCP servers, voice worker)  
-**Local database:** SQLite  
+**Database:** SQLite locally · Postgres when hosted on Vercel (D-98)  
 **Status:** Implemented. All phase gates (0–7) have passed. Since then, live data (a free Alpha Vantage key, SEC EDGAR and Yahoo Finance headlines), a free local model (Ollama) and spoken voice sessions (LiveKit Cloud) have run on the development machine; OpenAI's hosted API has not (no key). See [`PROJECT_STATUS.md`](PROJECT_STATUS.md).  
-**Last documentation review:** 2026-10-13 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing and PDF, voice with Lens, quick guide, research search, Vercel + Render deployment; D-80 to D-97)
+**Last documentation review:** 2026-10-16 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing and PDF, voice with Lens, quick guide, research search, Vercel deployment as one project with Postgres and Vercel Queues; D-80 to D-98)
 
 > **How to read this document.**
 > - **§1–§5** describe the system as built. Where the build deliberately differs from the original plan, the text says so and cites the decision (D-xx) in [`PROJECT_STATUS.md` › Decision log](PROJECT_STATUS.md#4-decision-log). §2.2 collects those differences in one table.
@@ -52,20 +52,30 @@ flowchart TD
   SEC --> T
   AVN --> T
   YN --> T
-  B --> DB[(SQLite)]
+  B --> DB[(SQLite locally<br/>Postgres on Vercel)]
+  B -.->|queue mode, Vercel| Q[Vercel Queues]
+  Q -.-> RC[Research consumer<br/>queue-triggered function]
+  RC --> RW
   WS --> DB
   MD -.->|provider cache, live mode| DB
   RS -.->|provider cache, live mode| DB
 ```
 
-- **Web → backend.** The browser talks only to the web app's own origin. A Next.js rewrite proxies `/api/*` to `BACKEND_URL`, so the HTTP-only session cookie stays first-party and no backend address or key is in the browser bundle (D-06).
-- **Hosted deployment (D-94).**
-  - The web app runs on **Vercel** (Root Directory `apps/web`). The backend runs on a **container host**: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`. The optional voice worker runs as a background worker (`Dockerfile.voice`).
-  - The backend can't run on Vercel because it keeps three MCP subprocesses, background research runs and a SQLite file.
+- **Web → backend.** The browser talks only to the web app's own origin. A route handler (`apps/web/app/api/[...path]/route.ts`) forwards `/api/*` to `BACKEND_URL` at request time (a build-time rewrite until D-98). The HTTP-only session cookie stays first-party, and no backend address or key is in the browser bundle (D-06).
+- **Hosted on Vercel (D-98)**, as one project with two Vercel Services (`vercel.json`):
+  - **`web`** (`apps/web`) is the only public service. Its binding to `backend` injects `BACKEND_URL` at runtime.
+  - **`backend`** (FastAPI, entry point `vercel_backend.asgi:app`) is internal. Each instance runs migrations under a Postgres advisory lock and starts the three MCP servers as child processes in its lifespan; on Vercel they inherit the backend's import path, and their logs go to stderr.
+  - A Vercel Function can't keep working after it answers, so research runs execute through **Vercel Queues** (`RUN_EXECUTION=queue`):
+    - `QueueRunManager` publishes `{run_id}` before answering.
+    - The private subscriber `vercel_backend.queue_consumer` runs it with `run_consumer.run_queued_research`. That claims the run atomically (at-least-once delivery), executes the same `ResearchWorkflowService`, and watches the run row for a cancel request.
+    - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`).
+  - **State is in Postgres** (Neon from the Vercel Marketplace), shared by every instance and the MCP servers.
+  - **Voice is off** in the hosted version: it needs an always-on worker (a Pro-plan Daemon).
+  - **Earlier hosting (D-94), still supported:** the web app alone on Vercel, and the backend on a container host (`render.yaml`, `Dockerfile.backend`, SQLite on a disk, research inline).
   - `apps/web/proxy.ts` (Next 16's renamed middleware) runs before every page and `/api` request:
     - It can ask for a site password (`SITE_PASSWORD`, HTTP Basic).
     - On `/api` requests it removes the browser's `Authorization` header and any client-sent secret, then adds `X-MarketLens-Proxy-Secret` (`PROXY_SHARED_SECRET`) server-side.
-  - With `PROXY_SHARED_SECRET` set, the backend rejects every `/api` request without it (403). Two routes are exempt: `/api/health` (the host's health check) and the voice worker's internal API, which has its own token.
+  - With `PROXY_SHARED_SECRET` set (needed only when the backend has a public address, as in D-94), the backend rejects every `/api` request without it (403). Two routes are exempt: `/api/health` (the host's health check) and the voice worker's internal API, which has its own token.
   - `APP_ENV=production` marks the session cookie `Secure`.
   - Locally none of these are set, and nothing changes.
 - **Backend → tools.** All data access and every workspace read and write go through the MCP client gateway. The gateway talks to three separate MCP server processes over stdio. There is no in-process shortcut: the temporary Phase 1 in-process gateway was deleted in Phase 2 (D-29).
@@ -73,7 +83,7 @@ flowchart TD
   - When voice is configured, the browser asks the backend for a voice session. It receives a short-lived, room-scoped LiveKit token and never the API secret. The token dispatches the voice worker into that room.
   - The worker's three tools call the backend's internal voice API, which runs the same `ResearchWorkflowService` and MCP servers as text mode (D-23, D-55, D-57).
   - Speech-to-text, the conversational model and text-to-speech run on LiveKit Inference (D-54). The research itself still uses the backend's LLM adapter.
-- **Persistence.** One SQLite file, split by writer:
+- **Persistence.** One database, split by writer: a SQLite file locally, Postgres when hosted (D-98).
   - **Backend:** runs, evidence, claims, briefs, confirmation grants, voice sessions and analytics.
   - **Workspace MCP server:** pending actions, saved briefs and the watchlist; it writes only after consuming a grant.
   - **Read-only servers:** the provider cache, and only in live mode.
@@ -83,7 +93,7 @@ flowchart TD
 ```text
 apps/web/                         Next.js 16 web app (App Router, Tailwind 4); API types generated from the backend's OpenAPI
 services/core/                    marketlens_core: shared config, domain models, errors, policy, calculations, trading calendar,
-                                  provider adapters and transports, SQLite migrations and repositories, confirmation service
+                                  provider adapters and transports, SQLite/Postgres migrations and repositories, confirmation service
 services/backend/                 FastAPI app: HTTP API, ResearchWorkflowService, agents, LLM providers, MCP client gateway, voice API
 services/mcp_market_data/         MCP server `market_data` (stdio, read-only)
 services/mcp_research_sources/    MCP server `research_sources` (stdio, read-only)
@@ -101,7 +111,9 @@ Dockerfile, docker-compose.yml    optional Docker toolchain for running the app 
 Dockerfile.backend                production backend image (FastAPI plus the three MCP servers it spawns; SQLite on /data)
 Dockerfile.voice                  optional voice worker image (LiveKit agent, no inbound port)
 render.yaml                       Render Blueprint: the backend from Dockerfile.backend with a disk, demo mode, a generated proxy secret (D-94)
-apps/web/vercel.json              Vercel settings for the web app (the backend runs on a container host)
+vercel.json                       Vercel Services: web (public) and backend (internal, bound to web) (D-98)
+vercel_backend/                   the backend's Vercel entry points: asgi.py (the app) and queue_consumer.py (research runs)
+scripts/run_queue_consumer.py     local stand-in for Vercel Queues delivery (queue-mode rehearsal)
 apps/web/proxy.ts                 optional site password, and the backend shared secret added to /api requests (D-94)
 ```
 
@@ -124,7 +136,7 @@ Python is one uv workspace: a root `pyproject.toml` and one lockfile covering ev
 | Separate pages: research home, run page, saved briefs, watchlist, settings | One chat-style screen: history rail on the left, the run in the middle, quick starts on the right, and a one-line research bar (ticker dropdown, dictation, voice session) docked at the bottom. Run details and comparisons open as dialogs. Saved briefs, the watchlist and data status have no UI (API only); `/research/[runId]` still opens a run | D-78, D-81, D-82, D-83 |
 | OpenAI as the only real model | Any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, so a free local model (Ollama) works without a key | D-76 |
 | Alpha Vantage requests limited per process (D-40) | Pacing shared by every process through SQLite, one upstream call for identical concurrent requests, one retry after a per-second rejection, and the daily quota reported as such | D-77 |
-| Deployment notes only; the app runs locally | Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94 |
+| Deployment notes only; the app runs locally | One Vercel project (D-98): Services `web` (public) and `backend` (internal, bound), research runs on Vercel Queues, Postgres from the Marketplace, voice off. Before that (D-94): Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94, D-98 |
 
 ## 3. Components and responsibilities
 
@@ -211,7 +223,8 @@ services/backend/app/
     schemas.py, deps.py   HTTP response contracts (the source of the web types); FastAPI dependencies
   services/
     research_workflow.py  ResearchWorkflowService: the one workflow shared by text and voice
-    run_manager.py        background run tasks, cancellation and clean shutdown
+    run_manager.py        starts runs: inline background tasks (local) or Vercel Queues (hosted); cancellation, stale runs
+    run_consumer.py       runs one queued run: atomic claim, execution, cancel watching (D-98)
     evidence_collector.py read-only MCP calls per category → evidence ledger and category status
     derived_metrics.py    deterministic calculations on retrieved evidence
     consistency.py        deterministic contradiction detection
@@ -368,11 +381,20 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
 
 **No silent substitution.** Live-mode failures map to structured errors (`RATE_LIMITED`, `PROVIDER_TIMEOUT`, `MALFORMED_PROVIDER_RESPONSE`, `CAPABILITY_UNAVAILABLE`, …), and the category is reported as failed or unavailable. Fixtures are never used in a live report.
 
-### 3.6 SQLite persistence
+### 3.6 Persistence (SQLite locally, Postgres hosted)
 
-- **Location:** one database file. The path comes from `DATABASE_URL` (default `data/marketlens.db`) and is resolved against the repository root (D-19).
-- **Schema:** foreign keys are on. Migrations in `marketlens_core/db/migrations/` are versioned and forward-only.
-- **Safety:** migrations re-check their version under the write lock, so concurrent processes cannot apply one twice (D-41). Startup refuses a schema newer than the code, and nothing is dropped outside tests.
+- **Location:** `DATABASE_URL`.
+  - **Locally**, a SQLite file (default `data/marketlens.db`, resolved against the repository root; D-19).
+  - **On Vercel**, Postgres (`postgresql://…`, D-98). `open_database(settings)` picks the implementation, and the backend and every MCP server use the same one.
+- **Schema:** Migrations are versioned and forward-only: `marketlens_core/db/migrations/` for SQLite (foreign keys on) and `migrations_postgres/` for Postgres, with the same version numbers and tables.
+  - The Postgres copy differs only where it must: identity columns instead of `AUTOINCREMENT`, `DOUBLE PRECISION` for the rate-limit time, and an explicit `rowid` identity on `evidence_items`, so `ORDER BY rowid` keeps insertion order in both.
+- **Safety:**
+  - SQLite migrations re-check their version under the write lock, so concurrent processes cannot apply one twice (D-41). Postgres applies all pending migrations in one transaction under an advisory lock, safe with many serverless instances.
+  - Startup refuses a schema newer than the code, and nothing is dropped outside tests.
+- **Write semantics:** SQLite writes use `BEGIN IMMEDIATE`. Postgres writes take one transaction-scoped advisory lock first, so every check-then-write (grant consumption, watchlist, rate-limit pacing) keeps the same guarantee.
+- **Postgres connections:**
+  - Each process keeps a small `psycopg_pool` pool. There are no server-side prepared statements, so Neon's pooled URL works, and connections are checked on checkout after a serverless freeze.
+  - Repositories write `?` placeholders. Two dialect differences are exposed as helpers: `Database.like` (`ILIKE` on Postgres) and `Database.json_text`.
 
 | Migration | Tables |
 |---|---|
@@ -447,11 +469,10 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - They use the local toolchain when uv, pnpm and Node are installed, and Docker (`docker-compose.yml`) otherwise.
   - `make start` seeds the demo data unless `.env` selects live data or a real model.
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
-- **Deployment (D-94):**
-  - `apps/web` deploys to Vercel (`vercel.json`; the build stops without an https `BACKEND_URL`).
-  - The backend and its MCP servers need a long-running container host: `render.yaml` builds `Dockerfile.backend` with a disk at `/data`.
-  - The voice worker uses `Dockerfile.voice`.
-  - The steps are in `docs/DEPLOY_VERCEL.md`.
+- **Deployment (D-98):**
+  - One Vercel project from `vercel.json`: services `web` and `backend`, Vercel Queues for research runs, Postgres from the Marketplace. The steps are in `docs/DEPLOY_VERCEL.md`.
+  - The earlier split (D-94: the web app on Vercel, the backend from `render.yaml` / `Dockerfile.backend`) remains an alternative.
+  - The voice worker image (`Dockerfile.voice`) is kept for a later always-on host.
 - **`scripts/seed_demo.py`** (D-74): fixture-only, idempotent demo data, created through the public API and the confirmation flow.
 - **`scripts/generate_fixtures.py [--check]`** regenerates the fixture dataset byte for byte.
 - **`scripts/export_openapi.py [--check]`** refreshes the web app's API schema.
@@ -512,7 +533,7 @@ sequenceDiagram
   participant WF as ResearchWorkflowService
   participant GW as MCP client gateway
   participant Srv as MCP servers
-  participant DB as SQLite
+  participant DB as Database (SQLite or Postgres)
   User->>Web: Ticker + research question
   Web->>API: POST /api/research (same-origin proxy)
   API->>GW: resolve_symbol, get_provider_status
@@ -787,7 +808,11 @@ Status on 2026-10-10, with later changes noted (last reviewed 2026-10-12). Evide
 - Next.js Proxy (formerly middleware; `apps/web/proxy.ts`, D-94): https://nextjs.org/docs/app/api-reference/file-conventions/proxy. The version-matched copy ships in `apps/web/node_modules/next/dist/docs/`.
 - Vercel monorepos (Root Directory `apps/web`): https://vercel.com/docs/monorepos
 - Vercel environment variables: https://vercel.com/docs/environment-variables
-- Vercel package managers (built-in pnpm stops at 10, hence the pinned `npx pnpm@12.10.1` in `apps/web/vercel.json`): https://vercel.com/docs/package-managers
+- Vercel package managers (built-in pnpm stops at 10, hence the pinned `npx pnpm@12.10.1` in `vercel.json`): https://vercel.com/docs/package-managers
+- Vercel Services, bindings and routing (D-98): https://vercel.com/docs/services · https://vercel.com/docs/services/bindings · https://vercel.com/docs/services/routing
+- Vercel Queues and its Python SDK (push subscribers, `[[tool.vercel.subscribers]]`): https://vercel.com/docs/queues/concepts · https://vercel.com/docs/queues/python-sdk
+- FastAPI on Vercel (entry point, lifespan): https://vercel.com/docs/frameworks/backend/fastapi
+- Vercel Functions limits (300 s on Hobby) and Daemons limits (why voice is off on Hobby): https://vercel.com/docs/functions/limitations · https://vercel.com/docs/daemons/limits
 - Render Blueprint specification (`render.yaml`): https://render.com/docs/blueprint-spec
 - Render persistent disks (`/data`; paid instances only, no zero-downtime deploys): https://render.com/docs/disks
 - Alpha Vantage API documentation: https://www.alphavantage.co/documentation/
