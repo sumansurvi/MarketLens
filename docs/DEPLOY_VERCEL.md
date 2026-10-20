@@ -1,122 +1,134 @@
-# Deploying MarketLens (Vercel + Render)
+# Deploying MarketLens on Vercel
 
-MarketLens has two parts, and only one of them fits Vercel:
+The whole app runs in **one Vercel project** on the free **Hobby** plan, using Vercel Services (decision D-98):
 
-| Part | Where | Why |
+| Part | On Vercel |
+|---|---|
+| **Website** (`apps/web`, Next.js) | Service `web`, public at your address. It forwards `/api/*` to the backend over a private connection (a *binding*). It can ask for a site password. |
+| **Backend** (FastAPI and its 3 MCP servers) | Service `backend`, **not public**: only the website can reach it. Each instance starts the MCP servers inside itself. |
+| **Research runs** | **Vercel Queues.** A new research is put on a queue, and a private queue-triggered function runs it (up to 5 minutes on Hobby). |
+| **Database** | **Postgres** from the Vercel Marketplace (Neon, free plan). It replaces the local SQLite file. |
+| **Voice (Lens)** | **Off** in the hosted version: it needs an always-on worker, which Hobby doesn't offer. Dictation still works, because it runs in the visitor's browser. |
+
+```
+Browser ──https──▶ web (Next.js) ──binding──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon)
+                   site password               │ publishes each run                 ▲
+                                               ▼                                    │
+                                         Vercel Queues ──▶ research consumer ───────┘
+                                                           (private function)
+```
+
+**Before you start:**
+- Services, Queues (Python SDK) and the Python backend are **beta** Vercel features. Hobby includes the first 1,000,000 queue operations a month, and one research uses only a handful.
+- Everything was rehearsed locally with Postgres, the Queues SDK's local server and the production web build (see [PROJECT_STATUS](../PROJECT_STATUS.md) D-98). It has **not yet been deployed to Vercel**, so the first deploy is the real test. [If something goes wrong](#if-something-goes-wrong) covers the likely problems.
+
+## 1. Create the Vercel project
+
+1. In Vercel choose **Add New › Project** and import the repository.
+2. Leave **Root Directory** as the repository root (`./`). The `vercel.json` there defines both services.
+   - If you imported the repository before with `apps/web` as the root, open Settings › Build and Deployment, clear **Root Directory**, and turn off any **Override** toggles.
+3. Under Git, set the **Production Branch** to the branch you deploy (for example `feature/vercel-services`, or `main` after merging).
+4. Click **Deploy**. The website appears. Research doesn't work yet, because the backend has no database (step 2).
+
+## 2. Add the database
+
+1. In the project open **Storage › Create Database › Neon** (Postgres).
+2. Choose the region **Washington, D.C. (us-east-1)**, close to Vercel's default region `iad1`, and the **Free** plan.
+3. Connect it to the project for Production and Preview. This adds `DATABASE_URL` to the project's environment variables.
+4. Open **Deployments**, pick the latest one, and choose **⋯ › Redeploy**. The backend creates its tables on the first request.
+
+## 3. Optional settings
+
+Add these under **Settings › Environment Variables**, then redeploy:
+
+| Variable | Value | |
 |---|---|---|
-| **Web app** (`apps/web`, Next.js) | **Vercel** | A standard Next.js app. `/api/*` is proxied to the backend, so the browser only ever talks to your Vercel address. |
-| **Backend** (FastAPI, 3 MCP servers, SQLite) | **A container host.** Render is set up in `render.yaml`; Railway, Fly.io, Cloud Run or a VM also work | It runs long-lived MCP subprocesses and background research, and keeps a SQLite file. Vercel's serverless functions can't do that. |
-| **Voice worker** (optional) | The same container host, as a background worker (`Dockerfile.voice`) | It is an always-on LiveKit agent. Dictation needs nothing on the server. |
+| `SITE_PASSWORD` | a password of your choice | recommended: visitors must enter it (any user name) before anything loads |
+| `RUN_TIMEOUT_SECONDS` | `120` (default) to `280` | a research must finish within the 300-second function limit on Hobby |
 
-Deploy the backend first, because the web app needs its URL. It takes about 15 minutes. The first deploy runs the **demo** (synthetic data, no API keys), so it works before you add any keys.
+What you don't need to set:
+- `RUN_EXECUTION=queue`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are set automatically on Vercel by `vercel_backend/`.
+- `BACKEND_URL` comes from the binding.
+- `PROXY_SHARED_SECRET` isn't needed, because the backend has no public address.
 
-```
-Browser ──https──▶ Vercel (apps/web)          ──https──▶ Render (Dockerfile.backend) ──▶ Alpha Vantage, SEC, Yahoo RSS, OpenAI
-                   proxy.ts: site password,              checks PROXY_SHARED_SECRET,
-                   adds PROXY_SHARED_SECRET              SQLite on a disk at /data
-```
+Environment variables belong to the whole project, so both services can read them on the server. None of them is sent to browsers.
 
-## 1. Backend on Render
+## 4. Check that it works
 
-1. In the Render dashboard choose **New › Blueprint**, connect your GitHub account and pick this repository and the branch you deploy from.
-2. Render reads [`render.yaml`](../render.yaml) and proposes one web service, **marketlens-backend**:
-   - built from `Dockerfile.backend`;
-   - a 1 GB disk at `/data` for the research history;
-   - demo-mode settings;
-   - `APP_ENV=production`, which makes the session cookie `Secure`;
-   - a randomly generated **`PROXY_SHARED_SECRET`**.
+1. Open your address. The browser asks for the password if you set one. MarketLens loads with the yellow **DEMO FIXTURES** label.
+2. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes within a minute in demo mode.
+3. Press the search icon and search for `apple`: the run appears.
+4. Optional: in **Logs**, choose the `backend` service. You should see `MCP server … ready` and, for each research, `research run …: completed`.
 
-   Click **Apply**.
-3. When the deploy is live, open `https://<your-service>.onrender.com/api/health`. You should see JSON with `"data_mode":"fixtures"`. Every other `/api` address answers **403** when opened directly; that's expected, because only your web app may call it.
-4. Note two values for step 2:
-   - the service URL (top of the service page);
-   - `PROXY_SHARED_SECRET` (**Environment** tab › reveal).
+## Live data (optional)
 
-**Plans:** Render names its plans by CPU and memory. `render.yaml` uses `0.5c-512mb`, the smallest paid size. The backend and its three MCP servers use about 290 MB when idle; pick `1c-2g` in the dashboard if you want more headroom for live data. A disk needs a paid instance. To try it for free, delete the `disk` block in `render.yaml` and set `plan: free`. Then the research history resets on every deploy, and the service sleeps when idle (the first visit after that takes about a minute).
-
-**Other hosts:** `Dockerfile.backend` runs anywhere. You need to:
-- mount a persistent volume at `/data`;
-- let the host set `PORT`;
-- use `/api/health` as the health check;
-- set the same variables as `render.yaml`;
-- generate the secret yourself with `openssl rand -hex 32`.
-
-To try the image locally, run `docker build -f Dockerfile.backend -t marketlens-backend . && docker run -p 8000:8000 -v marketlens-data:/data marketlens-backend`.
-
-## 2. Web app on Vercel
-
-1. In Vercel choose **Add New › Project** and import the same repository.
-2. Set **Root Directory** to `apps/web`. Leave "Include source files outside of the Root Directory" on (the default). The framework (Next.js) and the install and build commands come from [`apps/web/vercel.json`](../apps/web/vercel.json); don't override them. They run the exact pnpm version the project uses (12.10.1, through `npx`), because Vercel's built-in pnpm stops at version 10.
-3. Add these **Environment Variables**:
-
-   | Variable | Value | |
-   |---|---|---|
-   | `BACKEND_URL` | the Render URL, e.g. `https://marketlens-backend.onrender.com` (https, no trailing slash) | required: the build stops with a clear message without it |
-   | `PROXY_SHARED_SECRET` | exactly the value from Render | required when the backend has one (the blueprint sets one) |
-   | `SITE_PASSWORD` | a password of your choice | recommended: visitors must enter it before anything loads (any user name works) |
-
-4. Click **Deploy**. Open the address Vercel gives you. The browser asks for the password, then MarketLens loads with the yellow **DEMO FIXTURES** label. Run a research to check the whole path.
-
-With the CLI instead: `cd apps/web && vercel link`, add the variables with `vercel env add`, then `vercel --prod`.
-
-## 3. Tell the backend your Vercel address
-
-On Render, set **`FRONTEND_ORIGIN`** to your Vercel address (for example `https://marketlens-yourname.vercel.app`) and save; Render redeploys. The app already works before this step, because requests arrive through the proxy. This setting is the backend's CORS allow-list.
-
-## 4. Optional: live data
-
-All keys go on the **backend (Render › Environment)**, never in Vercel. Set:
+Add these to the project's environment variables, then redeploy:
 
 | Variable | Value |
 |---|---|
 | `APP_MODE`, `DATA_MODE` | `live` |
-| `ALPHA_VANTAGE_API_KEY` | your key (the free key allows 25 requests a day, shared by everyone using your site) |
+| `ALPHA_VANTAGE_API_KEY` | your key (the free key allows 25 requests a day, shared by everyone using the site) |
 | `SEC_USER_AGENT` | `MarketLens/0.1 contact=you@yourdomain.com` (SEC requires a real contact) |
 | `LLM_MODE` | `openai` |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` | an OpenAI key and a model that supports structured outputs |
 | `RUN_TIMEOUT_SECONDS` | `240` (model calls take longer than the demo) |
 
-The local Ollama setup (`OPENAI_BASE_URL=http://127.0.0.1:11434/v1`) runs only on your own computer, so a hosted backend needs a hosted model. Another OpenAI-compatible service works only if it supports the Responses API with structured outputs. When Alpha Vantage's plan has no news, headlines come from Yahoo Finance's public feed. The backend therefore needs outbound HTTPS to `www.alphavantage.co`, `data.sec.gov`, `www.sec.gov` and `feeds.finance.yahoo.com`. Render allows this by default. Every other setting is explained in [`.env.example`](../.env.example).
+The local Ollama setup runs only on your own computer, so the hosted backend needs a hosted model. Another OpenAI-compatible service works only if it supports the Responses API with structured outputs. Outbound HTTPS to Alpha Vantage, SEC EDGAR and Yahoo Finance is allowed by default. Every other setting is explained in [`.env.example`](../.env.example).
 
-## 5. Optional: voice (Lens)
+## Voice (not in the hosted version)
 
-1. **Backend (Render):**
-   - `VOICE_MODE=livekit`;
-   - `LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET` from your LiveKit Cloud project.
-2. **Worker:** uncomment the `marketlens-voice` block in `render.yaml` and push (Render's Blueprint syncs it). Or create a **Background Worker** from `Dockerfile.voice` by hand. Give it:
-   - the same `VOICE_MODE` and `LIVEKIT_*` values;
-   - the voice models (`VOICE_STT_MODEL`, `VOICE_LLM_MODEL`, `VOICE_TTS_MODEL`, optional `VOICE_TTS_VOICE`; the tested set is in `.env.example`);
-   - `VOICE_BACKEND_URL` = the backend's https URL.
-
-   The worker uses its own token (derived from the LiveKit secret) and doesn't need `PROXY_SHARED_SECRET`.
-3. The browser connects to LiveKit directly. The site is served over https, so the microphone works once the visitor allows it.
+The voice assistant needs a worker that stays connected to LiveKit all the time. On Vercel that means a **Daemon**, which needs the Pro plan to run all month: Hobby includes 10 vCPU-hours a month, about 10 hours of one worker. The alternative is LiveKit's own agent hosting. With voice off, the sound-wave button is greyed out with the label "Voice not configured", and everything else, including dictation, works. `Dockerfile.voice` is kept for later.
 
 ## Updating
 
-Push to the deployed branch: Render and Vercel both redeploy on their own. A Render service with a disk restarts in place, so the backend is unavailable for a short moment during each deploy, and a run in progress at that moment is marked failed. `BACKEND_URL` is fixed when the web app is built, so redeploy Vercel after changing it. Changes to `SITE_PASSWORD` or `PROXY_SHARED_SECRET` also take effect on the next Vercel deploy.
+Push to the production branch and Vercel redeploys both services. Preview deployments of other branches work too: each preview has its own queue partition. Previews share the production database unless you enable Neon's branch-per-preview option in the integration.
 
 ## If something goes wrong
 
-| What you see | Fix |
+| What you see | Where to look and what to do |
 |---|---|
-| Vercel build: "BACKEND_URL must be set to the public https URL…" | Add `BACKEND_URL` (https) to the Vercel project and redeploy. |
-| Vercel install or build uses another command | Settings › Build and Deployment: turn off the **Override** toggles, so the commands from `apps/web/vercel.json` apply. |
-| Red "Backend unavailable" bar, or "This backend only accepts requests through the MarketLens web app" | `PROXY_SHARED_SECRET` is missing in Vercel or differs from Render's. Fix it and redeploy Vercel. |
-| The first visit takes a minute | The Render free plan was asleep. Use a paid plan to keep it awake. |
-| Render logs show the service ran out of memory | Change the instance to `1c-2g` (Settings › Instance Type). |
-| Research history disappears after a deploy | The backend has no disk at `/data` (free plan). |
-| Render deploy fails its health check | Open the service's **Logs**. A configuration problem is printed with the variable to fix (for example `SEC_USER_AGENT` in live mode). |
+| Red "Backend unavailable" bar, or "MarketLens isn't connected to its backend yet" | Logs › `web`: if `BACKEND_URL is not set`, the binding is missing. Check `vercel.json` is at the repository root and Root Directory is `./`. |
+| "Backend unavailable" and the `backend` logs show `Invalid MarketLens configuration` | The message names the variable. The usual one: `DATABASE_URL` missing (step 2), or a live-mode key. |
+| A research stays **Queued**, then fails with "didn't finish in time" | The queue consumer didn't run. In Logs, look for the consumer function and its errors. Check that `pyproject.toml` still has `[[tool.vercel.subscribers]]`. |
+| A research fails with "couldn't be queued" | The backend couldn't publish to Vercel Queues. The `backend` logs show why (for example an authentication error). |
+| The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
+| Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
 ## What is protected, and what isn't
 
 Protected:
 - **`SITE_PASSWORD`** keeps strangers out of the site and its API.
-- **`PROXY_SHARED_SECRET`** stops anyone from calling the backend directly, bypassing the password.
+- The backend has **no public address**, and the queue consumer can only be started by Vercel Queues.
 - The session cookie is HTTP-only, `SameSite=Lax` and `Secure`.
-- API keys exist only on the backend.
+- API keys are server-side environment variables, never sent to browsers.
 
 Not protected:
-- MarketLens is still **one shared workspace**. Everyone who has the password sees the same research history and uses the same API key quotas.
-- There are no user accounts, per-user data or rate limits.
+- MarketLens is still **one shared workspace**. Everyone with the password sees the same research history and uses the same API key quotas.
+- There are no user accounts and no rate limits on research.
 
-Share the password only with people you trust. If you want a site anyone can open without a password, keep it in demo mode (synthetic data, no keys). Per-user accounts and rate limits would be a separate project (README › Deployment notes).
+Share the password only with people you trust. If you want a site anyone can open without a password, keep it in demo mode (synthetic data, no keys).
+
+## How it fits together (for maintainers)
+
+- **`vercel.json`:**
+  - service `web`: root `apps/web`; pnpm 12.10.1 through `npx`, because Vercel's own pnpm stops at 10; and the `backend` binding, which sets `BACKEND_URL`;
+  - service `backend`: root `./`, FastAPI, entry point `vercel_backend.asgi:app`;
+  - one public rewrite, `/(.*)` → `web`.
+- **`vercel_backend/`:**
+  - `asgi.py`: the app;
+  - `queue_consumer.py`: the `@subscribe` research consumer, declared under `[[tool.vercel.subscribers]]` in `pyproject.toml`;
+  - `__init__.py`: import paths and the Vercel defaults above.
+- **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. A build-time rewrite can't reach a binding.
+- **Research execution:** `RUN_EXECUTION=queue`.
+  - `QueueRunManager` publishes `{run_id}` before answering.
+  - `run_consumer.run_queued_research` claims the run atomically, runs it, and watches the database for cancellation.
+  - Runs left queued or running past their limit are marked failed when anyone looks.
+- **Postgres:** `migrations_postgres/` mirrors `migrations/` with the same version numbers. Writes take one advisory lock, so they are serialized as in SQLite.
+- **Local rehearsal:** see [TESTING_GUIDE](TESTING_GUIDE.md) §7.
+
+## Alternative: backend on another host
+
+The earlier setup (D-94) still works:
+- The website is a Vercel project with Root Directory `apps/web`. Set the install command `npx --yes pnpm@12.10.1 install --frozen-lockfile` and the build command `npx --yes pnpm@12.10.1 run build` in its settings.
+- Add the environment variables `BACKEND_URL`, `PROXY_SHARED_SECRET` and `SITE_PASSWORD`.
+- The backend runs from `render.yaml` / `Dockerfile.backend` on Render or any container host, with SQLite on a disk. Research then runs inside the backend process (`RUN_EXECUTION=inline`).

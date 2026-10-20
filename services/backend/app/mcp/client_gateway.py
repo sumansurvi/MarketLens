@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import sys
 import time
 from pathlib import Path
@@ -22,7 +23,7 @@ from typing import Any, Literal
 
 from jsonschema import Draft202012Validator
 from marketlens_core import __version__
-from marketlens_core.config import REPO_ROOT, Settings
+from marketlens_core.config import REPO_ROOT, Settings, mcp_log_directory
 from marketlens_core.errors import ErrorCode, ErrorInfo
 from marketlens_core.hashing import new_id
 from marketlens_core.timeutil import utc_now
@@ -55,7 +56,9 @@ def server_environment(settings: Settings, server_id: str) -> dict[str, str]:
         "DATA_MODE": settings.data_mode,
         "LOG_LEVEL": settings.log_level,
         "FIXTURE_DIR": str(settings.fixture_root),
-        "DATABASE_URL": f"sqlite:///{settings.database_path}",
+        "DATABASE_URL": settings.database_url
+        if settings.database_is_postgres
+        else f"sqlite:///{settings.database_path}",
     }
     if server_id in ("market_data", "research_sources"):
         env.update(
@@ -87,7 +90,19 @@ def server_environment(settings: Settings, server_id: str) -> dict[str, str]:
             env["SEC_USER_AGENT"] = settings.sec_user_agent
     if server_id == "research_workspace":
         env["ACTION_CONFIRMATION_TTL_SECONDS"] = str(settings.action_confirmation_ttl_seconds)
+    if os.environ.get("VERCEL"):
+        # In a Vercel Function the installed packages are found through the parent's import
+        # path, not a virtual environment, so the child servers get the same path (D-98).
+        env["PYTHONPATH"] = os.pathsep.join(_import_paths())
     return env
+
+
+def _import_paths() -> list[str]:
+    """The parent's import path without the standard library (each server has its own)."""
+    stdlib = os.path.realpath(sys.base_prefix)
+    return [
+        entry for entry in sys.path if entry and os.path.isdir(entry) and not os.path.realpath(entry).startswith(stdlib)
+    ]
 
 
 class ServerUnavailable(Exception):
@@ -103,7 +118,9 @@ def _describe(exc: BaseException) -> str:
 class ServerConnection:
     """Owns one MCP server process and its client session (supervised, restartable)."""
 
-    def __init__(self, server_id: str, params: StdioServerParameters, *, read_timeout: float, log_path: Path) -> None:
+    def __init__(
+        self, server_id: str, params: StdioServerParameters, *, read_timeout: float, log_path: Path | None
+    ) -> None:
         self.server_id = server_id
         self.params = params
         self.read_timeout = read_timeout
@@ -140,10 +157,13 @@ class ServerConnection:
 
     async def _supervise(self) -> None:
         delay = 0.25
-        self.log_path.parent.mkdir(parents=True, exist_ok=True)
+        if self.log_path is not None:
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
         while not self._closing:
             self._wake.clear()
-            log = self.log_path.open("a", encoding="utf-8")
+            # No log file (MCP_LOG_DIR=-): server logs go to this process's stderr, which is
+            # where Vercel's runtime logs come from.
+            log = self.log_path.open("a", encoding="utf-8") if self.log_path is not None else sys.stderr
             try:
                 async with Client(
                     stdio_client(self.params, errlog=log),
@@ -167,7 +187,8 @@ class ServerConnection:
             finally:
                 self._ready.clear()
                 self._client = None
-                log.close()
+                if log is not sys.stderr:
+                    log.close()
             if self._closing:
                 break
             self.restarts += 1
@@ -277,7 +298,7 @@ class MCPClientGateway:
         self.settings = settings
         # Tags child command lines (ignored by the servers) so operators/tests can find them.
         self.instance_id = new_id("mcpgw")
-        logs = log_dir or settings.database_path.parent / "runtime" / "logs"
+        logs = log_dir or mcp_log_directory(settings)
         self.connections = {
             server_id: ServerConnection(
                 server_id,
@@ -288,7 +309,7 @@ class MCPClientGateway:
                     cwd=str(REPO_ROOT),
                 ),
                 read_timeout=settings.mcp_tool_call_timeout_seconds,
-                log_path=logs / f"mcp_{server_id}.log",
+                log_path=logs / f"mcp_{server_id}.log" if logs is not None else None,
             )
             for server_id, module in SERVER_MODULES.items()
         }

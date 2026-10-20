@@ -13,7 +13,7 @@ import re
 import statistics
 from typing import Any
 
-from marketlens_core.db.connection import Database
+from marketlens_core.db.connection import AnyDatabase
 from marketlens_core.timeutil import iso_z, utc_now
 
 CATEGORY_KEYS = ("category_market", "category_fundamentals", "category_filings", "category_news")
@@ -57,7 +57,7 @@ def _percentile(values: list[float], fraction: float) -> float | None:
 
 
 class AnalyticsRepository:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: AnyDatabase) -> None:
         self.db = db
 
     def record(self, event: str, **properties: Any) -> None:

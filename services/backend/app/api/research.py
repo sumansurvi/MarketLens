@@ -36,7 +36,7 @@ async def create_research(
     """Validate the request synchronously, then run the research workflow in the background."""
     run = await container.workflow.create_run(request, session_id=session_id, origin="text")
     if run.status.value == "queued":
-        container.run_manager.start(run.run_id)
+        await container.run_manager.start(run.run_id)
     return CreateResearchResponse(run=run, poll_url=f"/api/research/{run.run_id}")
 
 
@@ -49,6 +49,7 @@ async def list_research(
     from marketlens_core.symbols import normalize_symbol
 
     normalized = normalize_symbol(symbol) if symbol else None
+    container.run_manager.sweep_stale()
     return RunListResponse(runs=container.runs.list_runs(limit=limit, symbol=normalized))
 
 
@@ -72,6 +73,7 @@ async def get_research(
     run_id: str = Depends(valid_run_id),
     container: AppContainer = Depends(get_container),
 ) -> ResearchRunDetailResponse:
+    container.run_manager.sweep_stale()
     detail = container.workflow.get_run_detail(run_id)
     active = container.run_manager.is_active(run_id)
     return ResearchRunDetailResponse(
@@ -142,5 +144,5 @@ async def rerun_research(
     )
     run = await container.workflow.create_run(request, session_id=session_id, origin="rerun", parent_run_id=run_id)
     if run.status.value == "queued":
-        container.run_manager.start(run.run_id)
+        await container.run_manager.start(run.run_id)
     return CreateResearchResponse(run=run, poll_url=f"/api/research/{run.run_id}")

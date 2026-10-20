@@ -52,7 +52,7 @@ flowchart LR
   API -- MCP over stdio, confirmed writes --> WS[research_workspace MCP]
   MD --> AV[(Alpha Vantage / fixtures)]
   RS --> SEC[(SEC EDGAR / fixtures)]
-  WS --> DB[(SQLite)]
+  WS --> DB[(SQLite locally<br/>Postgres on Vercel)]
   WF --> DB
 ```
 
@@ -99,6 +99,8 @@ Everything is configured with environment variables or a git-ignored `.env` (`cp
 | `DATA_MODE` | `fixtures` · `live` (Alpha Vantage + SEC EDGAR) | `fixtures` |
 | `LLM_MODE` | `fixture` (deterministic, offline) · `openai` | `fixture` |
 | `VOICE_MODE` | `disabled` · `livekit` | `disabled` |
+| `DATABASE_URL` | `sqlite:///…` (local file) · `postgresql://…` (hosted, D-98) | `sqlite:///./data/marketlens.db` |
+| `RUN_EXECUTION` | `inline` (background task in the backend) · `queue` (Vercel Queues; needs Postgres; set automatically on Vercel) | `inline` |
 
 **Live market data** (`APP_MODE=live`, `DATA_MODE=live`):
 - `ALPHA_VANTAGE_API_KEY`: a free key allows 25 requests a day and about one per second. A research run needs at most three (quote, daily prices, news); after the first refusal of news on a free key, later runs need two until the backend restarts, and more when the provider's fundamentals are used as a fallback. Results are cached, so re-runs need fewer.
@@ -212,22 +214,23 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 ## Deployment notes
 
-**Go live (Vercel + Render):**
-- The web app (`apps/web`) deploys to **Vercel**. Set Root Directory `apps/web`, `BACKEND_URL` and `PROXY_SHARED_SECRET`, and optionally `SITE_PASSWORD`.
-- The backend deploys to **Render** from [`render.yaml`](render.yaml) (`Dockerfile.backend`, a disk at `/data`, demo mode, a generated `PROXY_SHARED_SECRET`), or to any other container host.
-- The optional voice worker runs as a background worker from `Dockerfile.voice`.
+**Go live on Vercel (one project, free Hobby plan, D-98):** [`vercel.json`](vercel.json) defines two Vercel Services.
+- **`web`** (`apps/web`) is public. It forwards `/api/*` to the backend over a private binding (`apps/web/app/api/[...path]/route.ts`), and `SITE_PASSWORD` can lock it.
+- **`backend`** (FastAPI and its MCP servers, entry point `vercel_backend/asgi.py`) is internal.
 
-The step-by-step guide is [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md). The hosted site can sit behind a password (`SITE_PASSWORD`). The backend answers only your web app (`PROXY_SHARED_SECRET`, added server-side by `apps/web/proxy.ts`), and the session cookie is `Secure` (`APP_ENV=production`). It is still one shared workspace with no user accounts.
+Research runs go through **Vercel Queues**: the backend publishes each run, and a private queue-triggered function (`vercel_backend/queue_consumer.py`) runs it. Data lives in **Postgres** (Neon from the Vercel Marketplace); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
+
+The step-by-step guide is [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md). It also covers the earlier setup with the backend on Render (`render.yaml`, `Dockerfile.backend`). It is still one shared workspace with no user accounts.
 
 **Make and Docker:** `make start`, `make stop`, `make status`, `make run`, `make test` and `make evaluate` use the local toolchain, or Docker (`docker-compose.yml`) when uv, pnpm or Node are missing. Locally, `make start` and `make run` also start the voice worker when `.env` has `VOICE_MODE=livekit` (the Docker setup has no voice worker). Run `make help`.
 
-MarketLens is a **single-user MVP**: one browser session cookie, no user accounts and SQLite. Locally the backend binds to 127.0.0.1 (startup warns if it is not), and Docker is not required. The hosted setup above adds a site password, a backend shared secret and `Secure` cookies, which is enough for a demo or a small group you trust.
+MarketLens is a **single-user MVP**: one browser session cookie and no user accounts. Locally it uses SQLite, the backend binds to 127.0.0.1 (startup warns if it is not), and Docker is not required. The hosted setup above adds Postgres, a site password, an internal backend and `Secure` cookies, which is enough for a demo or a small group you trust.
 
 A public multi-user service is a separate project. It would need at least:
 
 - **Access and data:**
   - user accounts and per-user data isolation (runs, briefs and the watchlist are global today; the site password is one shared login);
-  - a managed database (e.g. Postgres) instead of SQLite, with migrations run by a release step.
+  - migrations run by a release step rather than at startup (hosted, Postgres migrations run on the first request under an advisory lock).
 - **Infrastructure:**
   - secrets in a secrets manager, with key rotation;
   - per-user rate limits and quotas, abuse protection, and stricter CORS and CSP;

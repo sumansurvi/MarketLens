@@ -11,6 +11,13 @@ dependencies = [
   "defusedxml>=0.7.1",
 ]
 
+[project.optional-dependencies]
+# Hosted deployments use Postgres (DATABASE_URL=postgresql://…, D-98); local runs use SQLite.
+postgres = [
+  "psycopg[binary]>=3.3,<4",
+  "psycopg-pool>=3.3,<4",
+]
+
 [build-system]
 requires = ["uv_build>=0.12,<0.13"]
 build-backend = "uv_build"

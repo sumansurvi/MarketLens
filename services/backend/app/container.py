@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from marketlens_core.actions import ActionService
 from marketlens_core.analytics import AnalyticsRepository
 from marketlens_core.config import Settings
-from marketlens_core.db import Database
+from marketlens_core.db import AnyDatabase, open_database
 from marketlens_core.db.repositories import AuditRepository, RunRepository, VoiceSessionRepository
 
 from app.mcp.client_gateway import MCPClientGateway
@@ -15,7 +15,7 @@ from app.mcp.gateway import ToolGateway
 from app.providers.llm.base import LLMProvider
 from app.providers.llm.factory import build_llm_provider
 from app.services.research_workflow import ResearchWorkflowService
-from app.services.run_manager import RunManager
+from app.services.run_manager import QueueRunManager, RunManager
 from app.services.voice import VoiceService
 from app.services.workspace import WorkspaceService
 
@@ -23,7 +23,7 @@ from app.services.workspace import WorkspaceService
 @dataclass
 class AppContainer:
     settings: Settings
-    db: Database
+    db: AnyDatabase
     runs: RunRepository
     audit: AuditRepository
     actions: ActionService
@@ -31,7 +31,7 @@ class AppContainer:
     llm: LLMProvider
     workflow: ResearchWorkflowService
     workspace: WorkspaceService
-    run_manager: RunManager
+    run_manager: RunManager | QueueRunManager
     voice: VoiceService
     analytics: AnalyticsRepository
 
@@ -39,14 +39,16 @@ class AppContainer:
 def build_container(
     settings: Settings, gateway: ToolGateway | None = None, llm: LLMProvider | None = None
 ) -> AppContainer:
-    db = Database(settings.database_path)
+    db = open_database(settings)
     runs = RunRepository(db)
     actions = ActionService(db, action_ttl_seconds=settings.action_confirmation_ttl_seconds)
     tool_gateway = gateway or MCPClientGateway(settings)
     provider = llm or build_llm_provider(settings)
     analytics = AnalyticsRepository(db)
     workflow = ResearchWorkflowService(settings, runs, tool_gateway, provider, analytics)
-    run_manager = RunManager(workflow)
+    run_manager: RunManager | QueueRunManager = (
+        QueueRunManager(settings, runs) if settings.run_execution == "queue" else RunManager(workflow)
+    )
     return AppContainer(
         settings=settings,
         db=db,

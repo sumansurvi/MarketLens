@@ -1,8 +1,8 @@
 # MarketLens evaluation report
 
-- Generated: 2026-10-13T10:08:22Z · app 0.1.0 · commit `122bc5f-dirty`
+- Generated: 2026-10-16T10:49:25Z · app 0.1.0 · commit `cee4c34-dirty`
 - Mode: **fixtures data, fixture LLM** (synthetic fixtures; deterministic, no network or credentials). This measures system behavior, not market or business outcomes.
-- Cases: **49/49 passed**; safety-critical: 12 (0 failed); wall time 22.8 s
+- Cases: **49/49 passed**; safety-critical: 12 (0 failed); wall time 27.2 s
 
 ## Release gates (EVALUATION.md §3, computed per §11)
 
@@ -35,9 +35,9 @@ Numeric checks: 5115 (failures 0); material claims grounded 558/558; missing-cat
 
 ## Latency and calls (fixture mode, measured)
 
-- Research runs measured: 26; run duration p50 168.5 ms, p95 179.0 ms
+- Research runs measured: 26; run duration p50 185.5 ms, p95 269.0 ms
 - Median MCP tool calls per run: 10.0; median LLM calls per run: 5.0
-- Step latency p50 (ms): calculations 2, collect_evidence 120, evidence_review 17, finalize 3, fundamentals_specialist 1, market_specialist 1, news_specialist 0, plan 0, supervisor_synthesis 1
+- Step latency p50 (ms): calculations 2, collect_evidence 134, evidence_review 18, finalize 3, fundamentals_specialist 1, market_specialist 1, news_specialist 0, plan 0, supervisor_synthesis 1
 - Cost: not measured (fixture LLM; no metered usage).
 
 ## Failed cases
