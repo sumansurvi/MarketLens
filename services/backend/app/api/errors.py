@@ -40,6 +40,22 @@ def error_response(
     return JSONResponse(body.model_dump(mode="json"), status_code=status_code or http_status_for(code), headers=headers)
 
 
+def backend_misconfigured(problems: list[str]) -> MarketLensError:
+    """What every /api request gets while the backend's setup is incomplete (D-101).
+
+    The site shows the message in its red bar, so the first problem leads; all are in the details.
+    Problems name settings and fixes, never secret values.
+    """
+    first = problems[0] if problems else "The backend did not finish starting."
+    more = f" ({len(problems) - 1} more in the details.)" if len(problems) > 1 else ""
+    return MarketLensError(
+        ErrorCode.BACKEND_MISCONFIGURED,
+        f"Setup problem: {first}{more}",
+        retryable=False,
+        details={"problems": problems},
+    )
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(MarketLensError)
     async def _domain(request: Request, exc: MarketLensError) -> JSONResponse:

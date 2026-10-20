@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `371 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
+| `make test` | `385 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -332,10 +332,24 @@ The thorough versions of the security checks run automatically in `make test`: e
   - `/api/health` staying open;
   - a backend with a shared secret trusting only the web app;
   - `PROXY_SHARED_SECRET` refused on Vercel, and the warning when production has no password.
-- **After deploying to Vercel (D-98, D-99):**
+- **Running on Vercel (D-101), automated:** `uv run pytest tests/integration/test_vercel_runtime.py` covers:
+  - the Vercel settings winning over variables copied from `.env.example`, `vercel dev` keeping local control, and `POSTGRES_URL` as a fallback;
+  - empty variables meaning the default, and invalid values reported by name, never by value;
+  - a 503 `BACKEND_MISCONFIGURED` naming the fix for an invalid configuration or an unreachable database on Vercel (with the Supabase pooler hint and no password in the message), while locally both still stop startup;
+  - MCP servers starting when their log folder can't be created, a dead supervisor recording why, and `/api/data-status` not hanging on servers that don't answer.
+- **The first live deploy's failure, rehearsed by hand (D-101):** repeat the queue-mode rehearsal above with two changes:
+  - start the backend and the consumer from a **read-only copy** of the repository (`git ls-files -co --exclude-standard` copied elsewhere, then `chmod -R a-w`);
+  - put **every `.env.example` value** in their environment, plus `VERCEL=1` and the Postgres and queue variables.
+
+  Expect:
+  - `/api/health` shows `app_env: production`, all three MCP servers ready, and warnings naming `APP_ENV=development` and `RUN_EXECUTION=inline` as ignored;
+  - research completes through the queue;
+  - symbols, data status, compare, briefs, the watchlist and the confirmation flow all answer.
+- **After deploying to Vercel (D-98, D-99, D-101):**
+  - `/api/health` shows `app_env: production`, all three `mcp_servers` ready, and no warnings except the password note when no password is set;
   - the address asks for the password, then runs a research to completion;
   - `https://<address>/api/research` opened in a private window asks for the password, and `/api/health` answers without it;
-  - the `backend` logs show `MCP server … ready` and `research run …: completed`;
+  - the `backend` logs show `MCP servers ready: 3 of 3 in … s` and `research run …: completed`;
   - the cookie `ml_session` shows `Secure` in the browser's developer tools.
 
 ---

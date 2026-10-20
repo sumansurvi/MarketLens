@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlparse
 
-from pydantic import Field, SecretStr
+from pydantic import Field, PrivateAttr, SecretStr, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -37,6 +37,20 @@ def find_repo_root() -> Path:
 REPO_ROOT = find_repo_root()
 
 
+def on_vercel() -> bool:
+    """True in a Vercel deployment (production or preview). ``vercel dev`` keeps local control."""
+    return bool(os.environ.get("VERCEL")) and os.environ.get("VERCEL_ENV") != "development"
+
+
+# A Vercel deployment always runs with these (D-101): a Function can only write to /tmp, so the
+# MCP servers log to stderr (which reaches Vercel's logs); it can't keep working after it has
+# answered, so research runs through Vercel Queues; and it is served over https, so the session
+# cookie is Secure. Project environment variables can't change them: values copied from
+# .env.example (APP_ENV=development, RUN_EXECUTION=inline, an empty MCP_LOG_DIR) once stopped
+# every MCP server on the live site.
+VERCEL_PROFILE: dict[str, str] = {"app_env": "production", "run_execution": "queue", "mcp_log_dir": "-"}
+
+
 class ConfigError(Exception):
     """Raised when configuration is invalid; ``problems`` are actionable messages."""
 
@@ -50,7 +64,12 @@ class Settings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=False,
+        # An empty variable (`MCP_LOG_DIR=`, as in .env.example) means "use the default", not "".
+        env_ignore_empty=True,
     )
+
+    # Project variables that tried to change the Vercel profile (set by load_settings).
+    _ignored_on_vercel: list[str] = PrivateAttr(default_factory=list)
 
     # Core
     app_env: Literal["development", "test", "production"] = "development"
@@ -76,7 +95,8 @@ class Settings(BaseSettings):
     # it, because a Vercel Function can't keep working after it has answered (needs Postgres).
     run_execution: Literal["inline", "queue"] = "inline"
     research_queue_topic: str = Field(default="marketlens-research-runs", pattern=r"^[a-z0-9][a-z0-9-]{0,62}$")
-    # Where the MCP servers' logs go. Default: data/runtime/logs. On Vercel only /tmp is writable.
+    # Where the MCP servers' logs go. Default: data/runtime/logs. `-`: stderr (always on Vercel,
+    # where only /tmp is writable).
     mcp_log_dir: str | None = None
 
     # LLM
@@ -254,6 +274,14 @@ class Settings(BaseSettings):
             )
         return warnings
 
+    def deployment_warnings(self) -> list[str]:
+        """Everything /api/health reports and startup logs: ignored Vercel variables, then exposure."""
+        ignored = [
+            f"{item} is set in the project's environment variables but ignored on Vercel; remove it."
+            for item in self._ignored_on_vercel
+        ]
+        return ignored + self.public_exposure_warnings()
+
 
 _PLACEHOLDER_EMAILS = ("your-email@example.com", "you@example.com")
 
@@ -316,7 +344,7 @@ def validate_settings(settings: Settings) -> list[str]:
                 "LLM_MODE=openai requires OPENAI_MODEL (choose a currently supported model that supports "
                 "structured outputs). Model IDs are not hardcoded."
             )
-    if settings.proxy_secret is not None and os.environ.get("VERCEL"):
+    if settings.proxy_secret is not None and on_vercel():
         problems.append(
             "PROXY_SHARED_SECRET must not be set when the backend runs on Vercel: /api goes straight from the "
             "browser to the backend, which can't send it, so every API call would be refused. Remove it; "
@@ -333,10 +361,18 @@ def validate_settings(settings: Settings) -> list[str]:
         )
     problems.extend(_database_problems(settings))
     if settings.run_execution == "queue" and not settings.database_is_postgres:
-        problems.append(
-            "RUN_EXECUTION=queue requires a Postgres DATABASE_URL: queue-triggered functions run on other "
-            "instances and can't share a local SQLite file."
-        )
+        if on_vercel():
+            problems.append(
+                "DATABASE_URL must be a Postgres URL on Vercel: research runs through Vercel Queues on other "
+                "instances, and the deployment's files are read-only. Add Neon from the Vercel Marketplace (it "
+                "sets DATABASE_URL), or set DATABASE_URL to your Supabase project's Transaction pooler "
+                "connection string (port 6543)."
+            )
+        else:
+            problems.append(
+                "RUN_EXECUTION=queue requires a Postgres DATABASE_URL: queue-triggered functions run on other "
+                "instances and can't share a local SQLite file."
+            )
     if settings.is_fixture_data and not (settings.fixture_root / "manifest.json").exists():
         problems.append(
             f"Fixture dataset not found at {settings.fixture_root}. Set FIXTURE_DIR or restore data/fixtures/v1."
@@ -351,18 +387,60 @@ def load_settings(
 
     ``overrides`` take precedence (used by tests and the evaluation runner). MCP server
     processes pass ``validate=False`` and run ``validate_server_settings`` instead, because
-    each server only receives the settings it needs.
+    each server only receives the settings it needs. On Vercel the hosted profile is enforced
+    whichever module loads the settings (D-101).
     """
+    hosted = on_vercel()
     if env_file == "default":
-        dotenv_disabled = os.environ.get("MARKETLENS_DOTENV", "").lower() == "disabled"
+        dotenv_disabled = hosted or os.environ.get("MARKETLENS_DOTENV", "").lower() == "disabled"
         candidate = REPO_ROOT / ".env"
         env_file = None if dotenv_disabled or not candidate.exists() else candidate
-    settings = Settings(_env_file=env_file, **overrides)  # type: ignore[call-arg]
+    try:
+        settings = Settings(_env_file=env_file, **overrides)  # type: ignore[call-arg]
+    except ValidationError as exc:
+        # Names and the rule only: the rejected value may be a secret.
+        raise ConfigError(
+            [f"{'.'.join(str(part) for part in err['loc']).upper()}: {err['msg']}" for err in exc.errors()]
+        ) from exc
+    if hosted:
+        settings = _apply_vercel_profile(settings, overrides)
     if validate:
         problems = validate_settings(settings)
         if problems:
             raise ConfigError(problems)
     return settings
+
+
+def _apply_vercel_profile(settings: Settings, overrides: dict[str, object]) -> Settings:
+    """``settings`` with VERCEL_PROFILE enforced. Explicit overrides (tests, scripts) still win."""
+    update: dict[str, object] = {}
+    ignored: list[str] = []
+    for field, value in VERCEL_PROFILE.items():
+        current = getattr(settings, field)
+        if field in overrides or current == value:
+            continue
+        if field in settings.model_fields_set:
+            ignored.append(f"{field.upper()}={current}")
+        update[field] = value
+    # Some Postgres integrations (Supabase's among them) set POSTGRES_URL rather than DATABASE_URL.
+    postgres_url = os.environ.get("POSTGRES_URL", "").strip()
+    if postgres_url and "database_url" not in settings.model_fields_set:
+        update["database_url"] = postgres_url
+    profiled = settings.model_copy(update=update)
+    profiled._ignored_on_vercel = ignored
+    return profiled
+
+
+def database_connection_hint(database_url: str) -> str | None:
+    """A known fix for a database the backend can't reach, when the URL shows one."""
+    host = urlparse(database_url).hostname or ""
+    if host.startswith("db.") and host.endswith(".supabase.co"):
+        return (
+            "This is Supabase's direct connection, which accepts only IPv6 unless the project has the IPv4 "
+            "add-on, and Vercel Functions connect over IPv4. Set DATABASE_URL to the Transaction pooler "
+            "connection string from Supabase › Connect (host …pooler.supabase.com, port 6543)."
+        )
+    return None
 
 
 def validate_server_settings(settings: Settings, server_id: str) -> list[str]:

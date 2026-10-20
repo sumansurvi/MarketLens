@@ -2,9 +2,14 @@
 
 Vercel loads these modules from the repository root (see ``[tool.vercel]`` in ``pyproject.toml``
 and the ``backend`` service in ``vercel.json``). Importing this package first makes the backend's
-packages importable from their source folders, in case the build installed them elsewhere, and
-sets defaults that suit a Vercel Function: no ``.env`` file, and MCP server logs on stderr (where
-Vercel's runtime logs come from) because only ``/tmp`` is writable.
+packages importable from their source folders, in case the build installed them elsewhere,
+and marks the process as running on Vercel.
+
+The Vercel settings themselves (no ``.env``, MCP server logs on stderr, research through Vercel
+Queues, ``APP_ENV=production``, ``POSTGRES_URL`` accepted as ``DATABASE_URL``) are enforced by
+``marketlens_core.config.load_settings`` whenever it runs on Vercel, whichever module loads the
+app (D-101). They used to be ``setdefault`` calls here, which project environment variables
+copied from ``.env.example`` silently overrode.
 """
 
 from __future__ import annotations
@@ -28,12 +33,7 @@ for _relative in SOURCES:
         sys.path.append(_path)
 
 os.environ.setdefault("MARKETLENS_ROOT", str(ROOT))
-os.environ.setdefault("MARKETLENS_DOTENV", "disabled")
-os.environ.setdefault("MCP_LOG_DIR", "-")
-# A Vercel Function can't run work after answering, so runs go through Vercel Queues; the site is
-# served over https, so the session cookie is Secure.
-os.environ.setdefault("RUN_EXECUTION", "queue")
-os.environ.setdefault("APP_ENV", "production")
-# The Neon integration from the Vercel Marketplace sets DATABASE_URL; accept POSTGRES_URL too.
-if not os.environ.get("DATABASE_URL") and os.environ.get("POSTGRES_URL"):
-    os.environ["DATABASE_URL"] = os.environ["POSTGRES_URL"]
+# This package is only loaded as the Vercel entry point (or in a local rehearsal of it,
+# docs/TESTING_GUIDE.md §7), so it marks the process as running on Vercel even when the
+# project hides Vercel's system environment variables. load_settings then applies the profile.
+os.environ.setdefault("VERCEL", "1")

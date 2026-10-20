@@ -19,7 +19,7 @@ import os
 import sys
 import time
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TextIO
 
 from jsonschema import Draft202012Validator
 from marketlens_core import __version__
@@ -109,6 +109,19 @@ class ServerUnavailable(Exception):
     pass
 
 
+def _stderr() -> TextIO:
+    """This process's stderr as a real file: the SDK hands it to the server process as its stderr.
+
+    A runtime that swaps ``sys.stderr`` for an in-memory writer would otherwise stop every server
+    from starting, so fall back to file descriptor 2 itself (D-101).
+    """
+    try:
+        sys.stderr.fileno()
+        return sys.stderr
+    except (AttributeError, OSError, ValueError):
+        return open(2, "w", encoding="utf-8", closefd=False)  # closed after use; fd 2 stays open
+
+
 def _describe(exc: BaseException) -> str:
     if isinstance(exc, BaseExceptionGroup):
         return "; ".join(_describe(e) for e in exc.exceptions)[:300]
@@ -138,6 +151,33 @@ class ServerConnection:
     def start(self) -> None:
         if self._task is None or self._task.done():
             self._task = asyncio.create_task(self._supervise(), name=f"mcp:{self.server_id}")
+            self._task.add_done_callback(self._supervisor_stopped)
+
+    def _supervisor_stopped(self, task: asyncio.Task[None]) -> None:
+        """Record why the supervisor ended, so /api/health never shows a silent failure (D-101)."""
+        if task.cancelled() or self._closing:
+            return
+        exc = task.exception()
+        if exc is not None:
+            self.last_error = _describe(exc)
+            logger.error("MCP server %s supervisor stopped: %s", self.server_id, self.last_error)
+
+    def _open_log(self) -> TextIO:
+        """The server's log file, or this process's stderr when there is none or it can't be written.
+
+        On Vercel only /tmp is writable: a log folder elsewhere must not stop the server (D-101).
+        """
+        if self.log_path is None:
+            return _stderr()
+        try:
+            self.log_path.parent.mkdir(parents=True, exist_ok=True)
+            return self.log_path.open("a", encoding="utf-8")
+        except OSError as exc:
+            logger.warning(
+                "MCP server %s: can't write its log file (%s); logging to stderr instead", self.server_id, exc
+            )
+            self.log_path = None
+            return _stderr()
 
     @property
     def ready(self) -> bool:
@@ -157,13 +197,11 @@ class ServerConnection:
 
     async def _supervise(self) -> None:
         delay = 0.25
-        if self.log_path is not None:
-            self.log_path.parent.mkdir(parents=True, exist_ok=True)
         while not self._closing:
             self._wake.clear()
             # No log file (MCP_LOG_DIR=-): server logs go to this process's stderr, which is
             # where Vercel's runtime logs come from.
-            log = self.log_path.open("a", encoding="utf-8") if self.log_path is not None else sys.stderr
+            log = self._open_log()
             try:
                 async with Client(
                     stdio_client(self.params, errlog=log),
@@ -230,6 +268,8 @@ class ServerConnection:
                 await asyncio.wait_for(self._task, timeout=10)
             except (TimeoutError, asyncio.CancelledError):
                 self._task.cancel()
+            except Exception as exc:  # noqa: BLE001 - it had died; the reason is already in last_error
+                logger.debug("MCP server %s supervisor had stopped: %s", self.server_id, _describe(exc))
 
 
 def translate_result(server_id: str, tool: str, raw: CallToolResult) -> ToolResult[Any]:
@@ -315,6 +355,7 @@ class MCPClientGateway:
         }
 
     async def start(self, wait_seconds: float = STARTUP_TIMEOUT_SECONDS) -> None:
+        started = time.monotonic()
         for connection in self.connections.values():
             connection.start()
         results = await asyncio.gather(
@@ -323,6 +364,9 @@ class MCPClientGateway:
         for (server_id, _), result in zip(self.connections.items(), results, strict=True):
             if isinstance(result, Exception):
                 logger.error("MCP server %s unavailable at startup: %s", server_id, result)
+        ready = sum(c.ready for c in self.connections.values())
+        # A cold start on Vercel launches all three servers; this shows how long that takes.
+        logger.info("MCP servers ready: %d of %d in %.1f s", ready, len(self.connections), time.monotonic() - started)
 
     def status(self) -> dict[str, dict[str, Any]]:
         return {

@@ -7,11 +7,11 @@ The whole app runs in **one Vercel project** on the free **Hobby** plan, using V
 | **Website** (`apps/web`, Next.js) | Service `web`, public at your address: every page. It can ask for a site password. |
 | **Backend** (FastAPI and its 3 MCP servers) | Service `backend`, public at **`/api`** on the same address, so the browser calls it directly. It asks for the same site password. Each instance starts the MCP servers inside itself. |
 | **Research runs** | **Vercel Queues.** A new research is put on a queue, and a private queue-triggered function runs it (up to 5 minutes on Hobby). |
-| **Database** | **Postgres** from the Vercel Marketplace (Neon, free plan). It replaces the local SQLite file. |
+| **Database** | **Postgres**: Neon from the Vercel Marketplace (free plan), or your own Supabase project through its pooler. It replaces the local SQLite file. |
 | **Voice (Lens)** | **Off** in the hosted version: it needs an always-on worker, which Hobby doesn't offer. Dictation still works, because it runs in the visitor's browser. |
 
 ```
-              ┌─ /api/* ──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon)
+              ┌─ /api/* ──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon or Supabase)
 Browser ─https┤               site password │ publishes each run       ▲
               │                             ▼                          │
               │                       Vercel Queues ──▶ research consumer (private function)
@@ -20,7 +20,7 @@ Browser ─https┤               site password │ publishes each run       ▲
 
 **Before you start:**
 - Services, Queues (Python SDK) and the Python backend are **beta** Vercel features. Hobby includes the first 1,000,000 queue operations a month, and one research uses only a handful.
-- Everything was rehearsed locally with Postgres, the Queues SDK's local server and the production web build (see [PROJECT_STATUS](../PROJECT_STATUS.md) D-98). It has **not yet been deployed to Vercel**, so the first deploy is the real test. [If something goes wrong](#if-something-goes-wrong) covers the likely problems.
+- The first deploy (2026-10-20) found that environment variables copied from `.env.example` stopped the backend's three data services. Since D-101 the backend applies its Vercel settings itself, and a setup problem shows up on the site as a message that names the fix. Both were rehearsed locally with a read-only copy of the repository, Postgres and the Queues SDK's local server (see [PROJECT_STATUS](../PROJECT_STATUS.md) D-101). [If something goes wrong](#if-something-goes-wrong) covers the likely problems.
 
 ## 1. Create the Vercel project
 
@@ -37,14 +37,23 @@ Browser ─https┤               site password │ publishes each run       ▲
 
 ## 2. Add the database
 
+**Neon from the Vercel Marketplace:**
 1. In the project open **Storage › Create Database › Neon** (Postgres).
 2. Choose the region **Washington, D.C. (us-east-1)**, close to Vercel's default region `iad1`, and the **Free** plan.
 3. Connect it to the project for Production and Preview. This adds `DATABASE_URL` to the project's environment variables.
 4. Open **Deployments**, pick the latest one, and choose **⋯ › Redeploy**. The backend creates its tables on the first request.
 
+**Or your own Supabase project:**
+1. In Supabase, open the project and click **Connect**. Under **Connection string**, choose **Transaction pooler** (port **6543**, host `…pooler.supabase.com`). Copy it and put your database password in it.
+   - Not the **direct connection** (`db.….supabase.co`, port 5432). It only accepts IPv6, which Vercel can't use, so every request hangs and then fails. The backend recognises that host and says so.
+2. In Vercel, add it as `DATABASE_URL` under **Settings › Environment Variables** for Production and Preview.
+3. Redeploy, as in step 4 above.
+
+If you connect Supabase through the Vercel Marketplace instead, it sets `POSTGRES_URL`. The backend uses that when `DATABASE_URL` isn't set.
+
 ## 3. Optional settings
 
-Add these under **Settings › Environment Variables**, then redeploy:
+Add these under **Settings › Environment Variables**, then redeploy. **Don't import `.env` or `.env.example` into the project:** they hold local values, and the backend has its own settings for Vercel.
 
 | Variable | Value | |
 |---|---|---|
@@ -52,7 +61,7 @@ Add these under **Settings › Environment Variables**, then redeploy:
 | `RUN_TIMEOUT_SECONDS` | `120` (default) to `280` | a research must finish within the 300-second function limit on Hobby |
 
 What you don't need to set:
-- `RUN_EXECUTION=queue`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are set automatically on Vercel by `vercel_backend/`.
+- `RUN_EXECUTION=queue`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are always used on Vercel: the backend enforces them (D-101). If the project has other values for them, for example copied from `.env.example`, they are ignored, and `/api/health` lists them under `warnings` so you can delete them.
 - `BACKEND_URL` comes from the binding.
 - **Don't set `PROXY_SHARED_SECRET`** in this setup. Browsers call `/api` directly and can't send it, so the backend refuses to start with it on Vercel and says why. It only belongs in the backend-on-its-own-host setup (bottom of this page).
 
@@ -61,9 +70,10 @@ Environment variables belong to the whole project, so both services can read the
 ## 4. Check that it works
 
 1. Open your address. The browser asks for the password if you set one. MarketLens loads with the yellow **DEMO FIXTURES** label.
-2. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes within a minute in demo mode.
-3. Press the search icon and search for `apple`: the run appears.
-4. Optional: in **Logs**, choose the `backend` service. You should see `MCP server … ready` and, for each research, `research run …: completed`.
+2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set.
+3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes within a minute in demo mode.
+4. Press the search icon and search for `apple`: the run appears.
+5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run …: completed`.
 
 ## Live data (optional)
 
@@ -93,8 +103,11 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | What you see | Where to look and what to do |
 |---|---|
 | The import or the deployment shows a single app (no `web` and `backend` services) | Settings › Build and Deployment › **Framework Preset** isn't **Services**. Set it, clear Root Directory (`./`), turn off any **Override** toggles, and redeploy. Vercel uses the `services` in `vercel.json` only with this preset. |
-| Red "Backend unavailable" bar | Logs › `backend`: a configuration message names the variable to fix. If there are no `backend` logs at all, check that Framework Preset is **Services**, that `vercel.json` is at the repository root and that Root Directory is `./`. |
-| "Backend unavailable" and the `backend` logs show `Invalid MarketLens configuration` | The message names the variable. Usually `DATABASE_URL` is missing (step 2), a live-mode key is missing, or `PROXY_SHARED_SECRET` is set (remove it). |
+| Red bar "Backend unavailable. Setup problem: …" | Do what the message says; `/api/health` lists every problem under `error.details.problems`. Usually `DATABASE_URL` is missing or not Postgres (step 2), a live-mode key is missing, or `PROXY_SHARED_SECRET` is set (remove it). |
+| "Setup problem: The backend can't use its database …" | `DATABASE_URL` is wrong or unreachable. With Supabase, use the **Transaction pooler** string (port 6543), not the direct `db.….supabase.co` one. |
+| Red bar "The MarketLens backend failed to answer (HTTP 500)" | The backend crashed before it could answer. Look in Logs › `backend`. If there are no `backend` logs at all, check that Framework Preset is **Services**, that `vercel.json` is at the repository root and that Root Directory is `./`. |
+| "The … MCP server is unavailable" | `/api/health` shows each server's `last_error`. Send it with the `backend` logs. A log folder the function can't write no longer stops the servers (D-101). |
+| `/api/health` warns "… is set in the project's environment variables but ignored on Vercel" | Delete that variable in Settings › Environment Variables. It does no harm, but it doesn't belong there. |
 | A research stays **Queued**, then fails with "didn't finish in time" | The queue consumer didn't run. In Logs, look for the consumer function and its errors. Check that `pyproject.toml` still has `[[tool.vercel.subscribers]]`. |
 | A research fails with "couldn't be queued" | The backend couldn't publish to Vercel Queues. The `backend` logs show why (for example an authentication error). |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
@@ -124,7 +137,13 @@ Share the password only with people you trust. If you want a site anyone can ope
 - **`vercel_backend/`:**
   - `asgi.py`: the app;
   - `queue_consumer.py`: the `@subscribe` research consumer, declared under `[[tool.vercel.subscribers]]` in `pyproject.toml`;
-  - `__init__.py`: import paths and the Vercel defaults above.
+  - `__init__.py`: import paths, and `VERCEL=1` when the platform hides its system variables.
+- **Vercel settings** (`marketlens_core.config`, D-101): on Vercel (`VERCEL` set, `VERCEL_ENV` not `development`), `load_settings` enforces `VERCEL_PROFILE` (`APP_ENV=production`, `RUN_EXECUTION=queue`, `MCP_LOG_DIR=-`), skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset. It works whichever module loads the app. Empty variables count as unset everywhere.
+- **Setup problems answer instead of crashing** (D-101):
+  - An invalid configuration makes `hosted_app_from_settings` serve a stand-in app. Every `/api` request gets `503 BACKEND_MISCONFIGURED` with the problems, and the site's red bar shows the first one.
+  - A database the backend can't open at startup gives the same 503, with a known fix (the Supabase pooler) when the URL shows one.
+  - Locally both still stop the backend, as before.
+- **MCP servers:** a log file that can't be written falls back to stderr, and a supervisor that dies records why in `last_error`.
 - **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. On Vercel `/api` never reaches the website, so this matters for local runs and the backend-on-its-own-host setup. The binding stays as a fallback for that route (a build-time rewrite couldn't use it).
 - **Site password on the backend** (`app/api/middleware.py`, D-99): with `SITE_PASSWORD` set and no `PROXY_SHARED_SECRET`, every `/api` request except `/api/health` must carry it as HTTP Basic credentials. With a secret, the backend trusts the website, which checked the password, and ignores direct calls.
 - **Research execution:** `RUN_EXECUTION=queue`.
