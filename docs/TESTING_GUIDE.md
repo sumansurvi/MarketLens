@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `368 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
+| `make test` | `371 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -327,11 +327,16 @@ The thorough versions of the security checks run automatically in `make test`: e
   - `http://localhost:3000` asks for the password;
   - research works after you sign in;
   - `curl localhost:8000/api/data-status` answers 403, and `curl localhost:8000/api/health` answers 200.
-- **After deploying to Vercel (D-98):**
+- **Site password on the backend (D-99), automated:** the last three tests in `tests/integration/test_hosted_deployment.py` cover:
+  - a 401 with `WWW-Authenticate` without or with a wrong password, and access with it (any user name);
+  - `/api/health` staying open;
+  - a backend with a shared secret trusting only the web app;
+  - `PROXY_SHARED_SECRET` refused on Vercel, and the warning when production has no password.
+- **After deploying to Vercel (D-98, D-99):**
   - the address asks for the password, then runs a research to completion;
+  - `https://<address>/api/research` opened in a private window asks for the password, and `/api/health` answers without it;
   - the `backend` logs show `MCP server … ready` and `research run …: completed`;
-  - the cookie `ml_session` shows `Secure` in the browser's developer tools;
-  - the backend has no public address of its own.
+  - the cookie `ml_session` shows `Secure` in the browser's developer tools.
 
 ---
 

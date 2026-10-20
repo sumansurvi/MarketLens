@@ -1,21 +1,21 @@
 # Deploying MarketLens on Vercel
 
-The whole app runs in **one Vercel project** on the free **Hobby** plan, using Vercel Services (decision D-98):
+The whole app runs in **one Vercel project** on the free **Hobby** plan, using Vercel Services (decisions D-98, D-99):
 
 | Part | On Vercel |
 |---|---|
-| **Website** (`apps/web`, Next.js) | Service `web`, public at your address. It forwards `/api/*` to the backend over a private connection (a *binding*). It can ask for a site password. |
-| **Backend** (FastAPI and its 3 MCP servers) | Service `backend`, **not public**: only the website can reach it. Each instance starts the MCP servers inside itself. |
+| **Website** (`apps/web`, Next.js) | Service `web`, public at your address: every page. It can ask for a site password. |
+| **Backend** (FastAPI and its 3 MCP servers) | Service `backend`, public at **`/api`** on the same address, so the browser calls it directly. It asks for the same site password. Each instance starts the MCP servers inside itself. |
 | **Research runs** | **Vercel Queues.** A new research is put on a queue, and a private queue-triggered function runs it (up to 5 minutes on Hobby). |
 | **Database** | **Postgres** from the Vercel Marketplace (Neon, free plan). It replaces the local SQLite file. |
 | **Voice (Lens)** | **Off** in the hosted version: it needs an always-on worker, which Hobby doesn't offer. Dictation still works, because it runs in the visitor's browser. |
 
 ```
-Browser ──https──▶ web (Next.js) ──binding──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon)
-                   site password               │ publishes each run                 ▲
-                                               ▼                                    │
-                                         Vercel Queues ──▶ research consumer ───────┘
-                                                           (private function)
+              ┌─ /api/* ──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon)
+Browser ─https┤               site password │ publishes each run       ▲
+              │                             ▼                          │
+              │                       Vercel Queues ──▶ research consumer (private function)
+              └─ everything else ──▶ web (Next.js pages), site password
 ```
 
 **Before you start:**
@@ -43,13 +43,13 @@ Add these under **Settings › Environment Variables**, then redeploy:
 
 | Variable | Value | |
 |---|---|---|
-| `SITE_PASSWORD` | a password of your choice | recommended: visitors must enter it (any user name) before anything loads |
+| `SITE_PASSWORD` | a password of your choice | **strongly recommended**: visitors must enter it (any user name) before anything loads. The website checks it for pages and the backend for `/api`; browsers send it with every request, so visitors sign in once. Without it, anyone who finds the address can run research on your keys |
 | `RUN_TIMEOUT_SECONDS` | `120` (default) to `280` | a research must finish within the 300-second function limit on Hobby |
 
 What you don't need to set:
 - `RUN_EXECUTION=queue`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are set automatically on Vercel by `vercel_backend/`.
 - `BACKEND_URL` comes from the binding.
-- `PROXY_SHARED_SECRET` isn't needed, because the backend has no public address.
+- **Don't set `PROXY_SHARED_SECRET`** in this setup. Browsers call `/api` directly and can't send it, so the backend refuses to start with it on Vercel and says why. It only belongs in the backend-on-its-own-host setup (bottom of this page).
 
 Environment variables belong to the whole project, so both services can read them on the server. None of them is sent to browsers.
 
@@ -87,8 +87,8 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 
 | What you see | Where to look and what to do |
 |---|---|
-| Red "Backend unavailable" bar, or "MarketLens isn't connected to its backend yet" | Logs › `web`: if `BACKEND_URL is not set`, the binding is missing. Check `vercel.json` is at the repository root and Root Directory is `./`. |
-| "Backend unavailable" and the `backend` logs show `Invalid MarketLens configuration` | The message names the variable. The usual one: `DATABASE_URL` missing (step 2), or a live-mode key. |
+| Red "Backend unavailable" bar | Logs › `backend`: a configuration message names the variable to fix. If there are no `backend` logs at all, check that `vercel.json` is at the repository root and that Root Directory is `./`. |
+| "Backend unavailable" and the `backend` logs show `Invalid MarketLens configuration` | The message names the variable. Usually `DATABASE_URL` is missing (step 2), a live-mode key is missing, or `PROXY_SHARED_SECRET` is set (remove it). |
 | A research stays **Queued**, then fails with "didn't finish in time" | The queue consumer didn't run. In Logs, look for the consumer function and its errors. Check that `pyproject.toml` still has `[[tool.vercel.subscribers]]`. |
 | A research fails with "couldn't be queued" | The backend couldn't publish to Vercel Queues. The `backend` logs show why (for example an authentication error). |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
@@ -97,8 +97,8 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 ## What is protected, and what isn't
 
 Protected:
-- **`SITE_PASSWORD`** keeps strangers out of the site and its API.
-- The backend has **no public address**, and the queue consumer can only be started by Vercel Queues.
+- **`SITE_PASSWORD`** keeps strangers out of the pages (checked by the website) and the API at `/api` (checked by the backend). Only `/api/health` answers without it; it shows modes and capabilities, never keys.
+- The queue consumer can only be started by Vercel Queues.
 - The session cookie is HTTP-only, `SameSite=Lax` and `Secure`.
 - API keys are server-side environment variables, never sent to browsers.
 
@@ -111,14 +111,15 @@ Share the password only with people you trust. If you want a site anyone can ope
 ## How it fits together (for maintainers)
 
 - **`vercel.json`:**
-  - service `web`: root `apps/web`; pnpm 12.10.1 through `npx`, because Vercel's own pnpm stops at 10; and the `backend` binding, which sets `BACKEND_URL`;
+  - service `web`: root `apps/web`; pnpm 12.10.1 through `npx`, because Vercel's own pnpm stops at 10; and a binding to `backend`, which sets `BACKEND_URL`;
   - service `backend`: root `./`, FastAPI, entry point `vercel_backend.asgi:app`;
-  - one public rewrite, `/(.*)` → `web`.
+  - two public rewrites, in this order: `/api/(.*)` → `backend` (the service sees the full `/api/…` path, which matches its routes), then `/(.*)` → `web`.
 - **`vercel_backend/`:**
   - `asgi.py`: the app;
   - `queue_consumer.py`: the `@subscribe` research consumer, declared under `[[tool.vercel.subscribers]]` in `pyproject.toml`;
   - `__init__.py`: import paths and the Vercel defaults above.
-- **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. A build-time rewrite can't reach a binding.
+- **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. On Vercel `/api` never reaches the website, so this matters for local runs and the backend-on-its-own-host setup. The binding stays as a fallback for that route (a build-time rewrite couldn't use it).
+- **Site password on the backend** (`app/api/middleware.py`, D-99): with `SITE_PASSWORD` set and no `PROXY_SHARED_SECRET`, every `/api` request except `/api/health` must carry it as HTTP Basic credentials. With a secret, the backend trusts the website, which checked the password, and ignores direct calls.
 - **Research execution:** `RUN_EXECUTION=queue`.
   - `QueueRunManager` publishes `{run_id}` before answering.
   - `run_consumer.run_queued_research` claims the run atomically, runs it, and watches the database for cancellation.

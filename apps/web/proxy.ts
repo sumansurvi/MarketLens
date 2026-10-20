@@ -7,10 +7,11 @@ import { NextResponse, type NextRequest } from "next/server";
  * Both settings are optional, so local development is unchanged:
  *
  * - SITE_PASSWORD: the browser asks for a password (its built-in sign-in box) before anything
- *   loads, so a public deployment isn't open to everyone. Any user name is accepted.
- * - PROXY_SHARED_SECRET: added to /api requests on their way to the backend (the rewrite in
- *   next.config.ts), so the backend answers only this web app. Must match the backend's value.
- *   It is added here on the server; browsers never see it.
+ *   loads, so a public deployment isn't open to everyone. Any user name is accepted. On Vercel,
+ *   /api goes straight to the backend, which checks the same password itself (D-99).
+ * - PROXY_SHARED_SECRET (a backend on its own host, D-94): added to /api requests on their way to
+ *   the backend (app/api/[...path]/route.ts), so the backend answers only this web app. It is added
+ *   here on the server; browsers never see it. Must match the backend's value.
  */
 
 const SECRET_HEADER = "x-marketlens-proxy-secret";
@@ -44,11 +45,15 @@ export function proxy(request: NextRequest) {
   if (!request.nextUrl.pathname.startsWith("/api/")) return NextResponse.next();
 
   const headers = new Headers(request.headers);
-  // Never pass the site password on to the backend, and never trust a secret sent by a browser.
-  headers.delete("authorization");
+  // Never trust a secret sent by a browser.
   headers.delete(SECRET_HEADER);
   const secret = process.env.PROXY_SHARED_SECRET?.trim();
-  if (secret) headers.set(SECRET_HEADER, secret);
+  if (secret) {
+    // A backend on its own host: the secret vouches for the password check above, so the site
+    // password itself isn't passed on. Without a secret the backend checks the password itself.
+    headers.delete("authorization");
+    headers.set(SECRET_HEADER, secret);
+  }
   return NextResponse.next({ request: { headers } });
 }
 

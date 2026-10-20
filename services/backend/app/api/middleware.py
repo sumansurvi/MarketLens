@@ -6,13 +6,21 @@ created them (MCP_TOOLS §6). Only its hash is stored. Locally the cookie is not
 because the app is served over http://localhost; with APP_ENV=production (served over https)
 it is.
 
-Hosted deployments can set PROXY_SHARED_SECRET (D-94): every /api request except the health
-check and the voice worker's internal API (which has its own bearer token) must then carry it
-in ``X-MarketLens-Proxy-Secret``. The web app's server-side proxy adds it; browsers never see it.
+Hosted deployments protect /api in one of two ways (the health check and the voice worker's
+internal API, which has its own bearer token, are exempt from both):
+
+- PROXY_SHARED_SECRET (D-94, a backend on its own host): every request must carry it in
+  ``X-MarketLens-Proxy-Secret``. The web app's server-side proxy adds it after checking the site
+  password; browsers never see it.
+- SITE_PASSWORD (D-99, one Vercel project with /api routed straight to the backend): every
+  request must carry the site password as HTTP Basic credentials. Browsers send the credentials
+  they entered for the site's pages with every request to the same site, so visitors sign in once.
 """
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import hmac
 import json
 import re
@@ -42,11 +50,13 @@ class RequestContextMiddleware:
         max_body_bytes: int,
         secure_cookie: bool = False,
         proxy_secret: str | None = None,
+        site_password: str | None = None,
     ) -> None:
         self.app = app
         self.max_body_bytes = max_body_bytes
         self.secure_cookie = secure_cookie
         self.proxy_secret = proxy_secret
+        self.site_password = site_password
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
@@ -65,19 +75,26 @@ class RequestContextMiddleware:
 
         method = scope.get("method", "GET").upper()
         path = scope.get("path", "")
-        if (
-            self.proxy_secret
-            and path.startswith("/api/")
-            and path != DIRECT_PATH
-            and not path.startswith(DIRECT_PREFIX)
-            and not hmac.compare_digest(headers.get(PROXY_HEADER, "").encode(), self.proxy_secret.encode())
-        ):
+        guarded = path.startswith("/api/") and path != DIRECT_PATH and not path.startswith(DIRECT_PREFIX)
+        if guarded and self.proxy_secret:
+            # Behind the web app's proxy, which already checked the site password.
+            if not hmac.compare_digest(headers.get(PROXY_HEADER, "").encode(), self.proxy_secret.encode()):
+                await _reject(
+                    send,
+                    request_id,
+                    403,
+                    "REQUEST_NOT_ALLOWED",
+                    "This backend only accepts requests through the MarketLens web app.",
+                )
+                return
+        elif guarded and self.site_password and not _password_matches(headers.get("authorization"), self.site_password):
             await _reject(
                 send,
                 request_id,
-                403,
+                401,
                 "REQUEST_NOT_ALLOWED",
-                "This backend only accepts requests through the MarketLens web app.",
+                "MarketLens is password protected.",
+                extra_headers=[(b"www-authenticate", b'Basic realm="MarketLens", charset="UTF-8"')],
             )
             return
         if method in STATE_CHANGING and path.startswith("/api/") and not headers.get(CLIENT_HEADER):
@@ -152,7 +169,27 @@ async def _reject_too_large(send: Send, request_id: str) -> None:
     await _reject(send, request_id, 413, "REQUEST_TOO_LARGE", "The request body is too large.")
 
 
-async def _reject(send: Send, request_id: str, status: int, code: str, message: str) -> None:
+def _password_matches(header: str | None, password: str) -> bool:
+    """Constant-time check of the password in an HTTP Basic ``Authorization`` header (any user name)."""
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        decoded = base64.b64decode(header[6:], validate=True).decode("utf-8")
+    except (ValueError, UnicodeDecodeError):
+        return False
+    supplied = decoded.split(":", 1)[1] if ":" in decoded else ""
+    return hmac.compare_digest(hashlib.sha256(supplied.encode()).digest(), hashlib.sha256(password.encode()).digest())
+
+
+async def _reject(
+    send: Send,
+    request_id: str,
+    status: int,
+    code: str,
+    message: str,
+    *,
+    extra_headers: list[tuple[bytes, bytes]] | None = None,
+) -> None:
     body = json.dumps(
         {
             "error": {
@@ -169,7 +206,11 @@ async def _reject(send: Send, request_id: str, status: int, code: str, message: 
         {
             "type": "http.response.start",
             "status": status,
-            "headers": [(b"content-type", b"application/json"), (b"x-request-id", request_id.encode())],
+            "headers": [
+                (b"content-type", b"application/json"),
+                (b"x-request-id", request_id.encode()),
+                *(extra_headers or []),
+            ],
         }
     )
     await send({"type": "http.response.body", "body": body})
