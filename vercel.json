@@ -1,0 +1,27 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "web": {
+      "root": "apps/web",
+      "framework": "nextjs",
+      "installCommand": "npx --yes pnpm@12.10.1 install --frozen-lockfile",
+      "buildCommand": "npx --yes pnpm@12.10.1 run build",
+      "bindings": [
+        { "type": "service", "service": "backend", "format": "url", "env": "BACKEND_URL" }
+      ]
+    },
+    "backend": {
+      "root": ".",
+      "framework": "fastapi",
+      "entrypoint": "vercel_backend.asgi:app",
+      "functions": {
+        "vercel_backend/asgi.py": {
+          "excludeFiles": "{apps/**,docs/**,tests/**,reports/**,data/runtime/**,data/*.db*,services/voice_agent/**,*.zip}"
+        }
+      }
+    }
+  },
+  "rewrites": [
+    { "source": "/(.*)", "destination": { "service": "web" } }
+  ]
+}

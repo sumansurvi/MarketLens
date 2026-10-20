@@ -1,9 +1,9 @@
 # MarketLens — Product Requirements Document (PRD)
 
-> **As built (reviewed 2026-10-13).** This is the original product brief, kept as written. The MVP is implemented; later product decisions changed some requirements, each recorded in [`PROJECT_STATUS.md`](PROJECT_STATUS.md) and summarized in [`architecture.md`](architecture.md) §2.2:
+> **As built (reviewed 2026-10-16).** This is the original product brief, kept as written. The MVP is implemented; later product decisions changed some requirements, each recorded in [`PROJECT_STATUS.md`](PROJECT_STATUS.md) and summarized in [`architecture.md`](architecture.md) §2.2:
 > - **FR-13, FR-14, FR-21, FR-25** (save a brief, watchlist, data-status screen, watchlist timestamps): removed from the web app on the user's request (D-81). The confirmed-write API, the workspace MCP server and `/api/data-status` still implement them.
 > - **Workspace:** one chat-style screen with the research bar at the bottom, a searchable ticker dropdown, quick starts on the right and per-section Copy/Share (D-78, D-81 to D-87); a PDF button instead of the Share menu (D-91); an "Explore MarketLens" quick guide (D-92); search across past research (D-96). Built for desktop and laptop browsers (D-93).
-> - **Deployment:** deployable to Vercel (web app) and Render or another container host (backend), with an optional shared site password (D-94). It remains one shared workspace without user accounts.
+> - **Deployment:** one Vercel project on the free Hobby plan (D-98): web app and internal backend as Vercel Services, research runs on Vercel Queues, Postgres from the Marketplace, an optional shared site password, voice off when hosted. The earlier split with the backend on Render (D-94) remains an alternative. It is still one shared workspace without user accounts.
 > - **FR-03 news:** Alpha Vantage news is premium; live mode falls back to Yahoo Finance's public headline feed (D-86). **Freshness:** financial figures come only from the latest reporting period (D-85).
 > - **FR-10 voice:** works with LiveKit Cloud and was run with spoken sessions (2026-10-12). The assistant is called **Lens** and has a large voice screen (D-88 to D-90). Dictation in the research bar was added (D-83).
 

@@ -2,10 +2,11 @@
 
 **Purpose:** This document defines the actual MCP boundaries, tool names, inputs, outputs, permissions and failure behavior. Claude Code must implement these contracts or document a justified change before altering them.
 
-> **As built (reviewed 2026-10-13).** The contracts below are implemented, with the changes in the §0 change log.
+> **As built (reviewed 2026-10-16).** The contracts below are implemented, with the changes in the §0 change log.
 > - **Tools:** 19 in all, the gateway's allowlist (`services/backend/app/mcp/gateway.py`): `market_data` 5, `research_sources` 7 (including B6 `resolve_symbol` and B7 `search_symbols`), `research_workspace` 7.
 > - **Confirmed writes:** since D-81 the web app has no save or watchlist screens, so the §6 confirmation panel exists only as the API flow (propose → preview → confirm).
 > - **Not MCP tools:** searching past research (D-96, `GET /api/research/search`) and run history are backend-owned, like the runs, claims and briefs they read.
+> - **Hosted on Vercel (D-98):** the three servers still run as stdio child processes of each backend instance, and of the queue-triggered research consumer. They share Postgres instead of a SQLite file. The tool contracts are unchanged.
 
 ## 0. Contract change log
 

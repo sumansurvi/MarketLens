@@ -4,12 +4,14 @@ version = "0.1.0"
 description = "MarketLens FastAPI backend and shared research workflow."
 requires-python = ">=3.11"
 dependencies = [
-  "marketlens-core",
+  "marketlens-core[postgres]",
   "mcp>=2.3,<3",
   "openai>=3.26,<4",
   "livekit-api>=1.2.1,<2",
   "fastapi>=0.143",
   "uvicorn[standard]>=0.54",
+  # Vercel Queues (RUN_EXECUTION=queue, D-98): publish research runs and consume them.
+  "vercel-queue>=0.9,<0.10",
 ]
 
 [tool.uv.sources]

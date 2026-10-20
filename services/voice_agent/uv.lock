@@ -1144,9 +1144,12 @@ requires-dist = [
     { name = "defusedxml", specifier = ">=0.7.1" },
     { name = "httpx2", specifier = ">=2.13" },
     { name = "mcp", specifier = ">=2.3,<3" },
+    { name = "psycopg", extras = ["binary"], marker = "extra == 'postgres'", specifier = ">=3.3,<4" },
+    { name = "psycopg-pool", marker = "extra == 'postgres'", specifier = ">=3.3,<4" },
     { name = "pydantic", specifier = ">=2.14" },
     { name = "pydantic-settings", specifier = ">=2.15" },
 ]
+provides-extras = ["postgres"]
 
 [[package]]
 name = "marketlens-voice-agent"

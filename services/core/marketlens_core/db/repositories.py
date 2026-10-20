@@ -12,7 +12,7 @@ import sqlite3
 from dataclasses import dataclass
 from typing import Any, Literal
 
-from marketlens_core.db.connection import Database
+from marketlens_core.db.connection import AnyDatabase
 from marketlens_core.models import (
     AgentStep,
     CompanyIdentity,
@@ -87,7 +87,7 @@ def _json(value: Any) -> str:
 
 
 class RunRepository:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: AnyDatabase) -> None:
         self.db = db
 
     # ------------------------------------------------------------------ runs
@@ -197,11 +197,12 @@ class RunRepository:
             return []
         conditions: list[str] = []
         params: list[Any] = []
+        like, company = self.db.like, self.db.json_text("r.company_json", "company_name")
         for term in terms:
             conditions.append(
-                "(r.symbol LIKE ? ESCAPE '\\' OR json_extract(r.company_json, '$.company_name') LIKE ? ESCAPE '\\' "
-                "OR r.question LIKE ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM research_claims c WHERE c.run_id = r.run_id "
-                "AND c.withheld = 0 AND c.text LIKE ? ESCAPE '\\'))"
+                f"(r.symbol {like} ? ESCAPE '\\' OR {company} {like} ? ESCAPE '\\' "  # noqa: S608 - dialect keywords from code; terms are bound
+                f"OR r.question {like} ? ESCAPE '\\' OR EXISTS (SELECT 1 FROM research_claims c WHERE c.run_id = r.run_id "
+                f"AND c.withheld = 0 AND c.text {like} ? ESCAPE '\\'))"
             )
             params.extend([f"%{_escape_like(term)}%"] * 4)
         sql = f"SELECT r.* FROM research_runs r WHERE {' AND '.join(conditions)} ORDER BY r.created_at DESC LIMIT 200"  # noqa: S608 - fixed SQL fragments; terms are bound parameters
@@ -252,6 +253,45 @@ class RunRepository:
                 "WHERE status IN ('completed','partial') GROUP BY symbol"
             ).fetchall()
         return {r["symbol"]: parse_iso_datetime(r["last"]) for r in rows if r["last"]}
+
+    def claim_queued_run(self, run_id: str) -> bool:
+        """Atomically move a queued run to running; False if another delivery got it first (D-98)."""
+        with self.db.write() as conn:
+            cursor = conn.execute(
+                "UPDATE research_runs SET status = 'running', updated_at = ? WHERE run_id = ? AND status = 'queued'",
+                (iso_z(utc_now()), run_id),
+            )
+            return cursor.rowcount == 1
+
+    def fail_run(self, run_id: str, message: str, code: str = "INTERNAL_ERROR") -> None:
+        """Mark one unfinished run failed with a reason (queue mode: not queued, or interrupted)."""
+        error = RunError(code=code, message=message)
+        now = iso_z(utc_now())
+        with self.db.write() as conn:
+            conn.execute(
+                "UPDATE research_runs SET status = 'failed', stage = 'done', updated_at = ?, completed_at = ?, "
+                "errors_json = ? WHERE run_id = ? AND status IN ('queued','running')",
+                (now, now, _json([error.model_dump(mode="json")]), run_id),
+            )
+
+    def fail_stale_runs(self, cutoff: dt.datetime) -> int:
+        """Queue mode: runs still queued or running since before ``cutoff`` can't finish any more.
+
+        A queue-triggered function stops at its maximum duration, so a run whose function was
+        cut off would otherwise stay "running" forever. Measured from when it started (or was
+        created, if it never started)."""
+        error = RunError(
+            code="INTERNAL_ERROR",
+            message="The research run didn't finish in time and was stopped. Try again.",
+        )
+        now = iso_z(utc_now())
+        with self.db.write() as conn:
+            cursor = conn.execute(
+                "UPDATE research_runs SET status = 'failed', stage = 'done', updated_at = ?, completed_at = ?, "
+                "errors_json = ? WHERE status IN ('queued','running') AND COALESCE(started_at, created_at) < ?",
+                (now, now, _json([error.model_dump(mode="json")]), iso_z(cutoff)),
+            )
+            return cursor.rowcount
 
     def mark_interrupted(self) -> int:
         """Runs left active by a previous process cannot resume; mark them failed."""
@@ -388,9 +428,9 @@ class RunRepository:
     def save_evidence(self, run_id: str, items: list[EvidenceItem]) -> None:
         with self.db.write() as conn:
             conn.executemany(
-                """INSERT OR IGNORE INTO evidence_items (run_id, evidence_id, kind, symbol, source_name, source_url,
+                """INSERT INTO evidence_items (run_id, evidence_id, kind, symbol, source_name, source_url,
                 published_date, period_start, period_end, retrieved_at, source_mode, is_fixture, content_hash,
-                item_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                item_json) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT DO NOTHING""",
                 [
                     (
                         run_id,
@@ -464,7 +504,7 @@ class RunRepository:
 class WorkspaceRepository:
     """Watchlist and saved briefs. Writes happen only inside confirmed-action transactions."""
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: AnyDatabase) -> None:
         self.db = db
 
     def list_watchlist(self) -> list[WatchlistItem]:
@@ -522,7 +562,7 @@ class WorkspaceRepository:
 
 
 class AuditRepository:
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: AnyDatabase) -> None:
         self.db = db
 
     def record(
@@ -581,7 +621,7 @@ class VoiceSessionRecord(DomainModel):
 class VoiceSessionRepository:
     """Voice rooms bound to the browser session (by hash) that requested them."""
 
-    def __init__(self, db: Database) -> None:
+    def __init__(self, db: AnyDatabase) -> None:
         self.db = db
 
     def create(self, record: VoiceSessionRecord) -> None:

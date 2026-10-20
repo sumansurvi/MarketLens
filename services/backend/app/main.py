@@ -40,9 +40,12 @@ def create_app(settings: Settings, *, gateway: ToolGateway | None = None, llm: L
         applied = initialize_database(container.db)
         if applied:
             logger.info("applied schema migrations %s", applied)
-        interrupted = container.runs.mark_interrupted()
-        if interrupted:
-            logger.warning("marked %d interrupted run(s) as failed", interrupted)
+        if settings.run_execution == "inline":
+            # Inline runs lived in the previous process. In queue mode other instances may be
+            # running them right now; stale ones are stopped by sweep_stale instead (D-98).
+            interrupted = container.runs.mark_interrupted()
+            if interrupted:
+                logger.warning("marked %d interrupted run(s) as failed", interrupted)
         for warning in settings.public_exposure_warnings():
             logger.warning(warning)
         starter = getattr(container.gateway, "start", None)
@@ -56,6 +59,7 @@ def create_app(settings: Settings, *, gateway: ToolGateway | None = None, llm: L
             closer = getattr(container.gateway, "aclose", None)
             if closer is not None:
                 await closer()
+            container.db.close()
 
     app = FastAPI(
         title="MarketLens API",

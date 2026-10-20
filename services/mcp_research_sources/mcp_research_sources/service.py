@@ -630,10 +630,10 @@ def build_research_sources_service(settings: Settings) -> ResearchSourcesService
             lambda: reference_clock(settings, dataset),
             fixture_dataset=dataset,
         )
-    from marketlens_core.db import Database, initialize_database
+    from marketlens_core.db import initialize_database, open_database
     from marketlens_core.providers.live_transport import LiveAlphaVantageTransport, LiveSecTransport, ProviderCache
 
-    db = Database(settings.database_path)
+    db = open_database(settings)
     initialize_database(db)
     cache = ProviderCache(db)
     fallback = None
