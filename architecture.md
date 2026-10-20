@@ -66,11 +66,13 @@ flowchart TD
   - **Routing (D-99):** `/api/(.*)` → **`backend`** (FastAPI, entry point `vercel_backend.asgi:app`), then `/(.*)` → **`web`** (`apps/web`). Both are public on one address, so the session cookie stays first-party. `web` keeps a binding to `backend` (`BACKEND_URL`) for its `/api` forwarding route, which on Vercel isn't reached.
   - **Site password on both (D-99):** `proxy.ts` checks `SITE_PASSWORD` for pages, and the backend middleware checks it for `/api` (HTTP Basic; browsers resend the credentials they entered, so visitors sign in once). `PROXY_SHARED_SECRET` is refused on Vercel, because browsers can't send it.
   - **`backend`:** each instance runs migrations under a Postgres advisory lock and starts the three MCP servers as child processes in its lifespan; on Vercel they inherit the backend's import path, and their logs go to stderr.
+  - **Vercel settings are enforced, not defaulted (D-101):** on Vercel, `load_settings` always uses `APP_ENV=production`, `RUN_EXECUTION=queue` and `MCP_LOG_DIR=-`, skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset, whichever module loads the app. Project variables that say otherwise (for example copied from `.env.example`) are ignored and listed in `/api/health` `warnings`.
+  - **Setup problems answer instead of crashing (D-101):** an invalid configuration, or a database the backend can't open at startup, gives a 503 `BACKEND_MISCONFIGURED` on every `/api` request. The message names the fix, and the site's red bar shows it. Locally both still stop startup.
   - A Vercel Function can't keep working after it answers, so research runs execute through **Vercel Queues** (`RUN_EXECUTION=queue`):
     - `QueueRunManager` publishes `{run_id}` before answering.
     - The private subscriber `vercel_backend.queue_consumer` runs it with `run_consumer.run_queued_research`. That claims the run atomically (at-least-once delivery), executes the same `ResearchWorkflowService`, and watches the run row for a cancel request.
     - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`).
-  - **State is in Postgres** (Neon from the Vercel Marketplace), shared by every instance and the MCP servers.
+  - **State is in Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler), shared by every instance and the MCP servers.
   - **Voice is off** in the hosted version: it needs an always-on worker (a Pro-plan Daemon).
   - **Earlier hosting (D-94), still supported:** the web app alone on Vercel, and the backend on a container host (`render.yaml`, `Dockerfile.backend`, SQLite on a disk, research inline).
   - `apps/web/proxy.ts` (Next 16's renamed middleware) runs before every page and `/api` request:
@@ -481,7 +483,9 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
 - **`scripts/export_openapi.py [--check]`** refreshes the web app's API schema.
 - **Configuration:**
   - Environment variables or a git-ignored `.env`. `.env.example` documents every variable, and a test keeps it in sync.
-  - Invalid combinations stop startup with an actionable message. For example, `APP_MODE=demo` requires fixtures and the fixture LLM (D-19).
+  - Invalid combinations stop startup with an actionable message. For example, `APP_MODE=demo` requires fixtures and the fixture LLM (D-19). An invalid value is reported by the variable's name and the rule, never by the value (D-101).
+  - An empty variable (`NAME=`) means "use the default" (D-101).
+  - Hosted on Vercel, the hosted profile is enforced and setup problems answer with a 503 instead of crashing (§2, D-101).
 
 ## 4. Data contracts
 
@@ -813,6 +817,8 @@ Status on 2026-10-10, with later changes noted (last reviewed 2026-10-12). Evide
 - Vercel environment variables: https://vercel.com/docs/environment-variables
 - Vercel package managers (built-in pnpm stops at 10, hence the pinned `npx pnpm@12.10.1` in `vercel.json`): https://vercel.com/docs/package-managers
 - Vercel Services, bindings and routing (D-98): https://vercel.com/docs/services · https://vercel.com/docs/services/bindings · https://vercel.com/docs/services/routing
+- Vercel system environment variables (`VERCEL`, `VERCEL_ENV`: build and runtime, when the project exposes them; D-101): https://vercel.com/docs/environment-variables/system-environment-variables
+- Supabase connection strings (direct connection IPv6-only without the IPv4 add-on; the shared Transaction pooler, port 6543, is IPv4, free and meant for serverless, without prepared statements; D-101): https://supabase.com/docs/guides/database/connecting-to-postgres
 - Vercel Services guide (Framework Preset **Services** required, D-100): https://vercel.com/kb/guide/vercel-services
 - Vercel Queues and its Python SDK (push subscribers, `[[tool.vercel.subscribers]]`): https://vercel.com/docs/queues/concepts · https://vercel.com/docs/queues/python-sdk
 - FastAPI on Vercel (entry point, lifespan): https://vercel.com/docs/frameworks/backend/fastapi

@@ -30,8 +30,16 @@ export class ApiError extends Error {
   }
 }
 
-const BACKEND_DOWN =
-  "The MarketLens backend is not reachable. Start it with `uv run uvicorn app.main:app --port 8000` and retry.";
+const LOCAL_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
+
+/** The start command only helps on a developer's machine; a hosted site gets a hint for its operator. */
+function backendDown(status: number): string {
+  if (typeof window !== "undefined" && LOCAL_HOSTS.has(window.location.hostname)) {
+    return "The MarketLens backend is not reachable. Start it with `uv run uvicorn app.main:app --port 8000` and retry.";
+  }
+  if (status === 0) return "The MarketLens backend is not reachable. Check your connection and retry.";
+  return `The MarketLens backend failed to answer (HTTP ${status}). If you run this site, its backend logs say why.`;
+}
 
 /**
  * Same-origin JSON call to the backend (proxied by Next.js). Errors always surface as
@@ -55,7 +63,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       cache: "no-store",
     });
   } catch {
-    throw new ApiError("BACKEND_UNAVAILABLE", BACKEND_DOWN, 0, {}, null, true);
+    throw new ApiError("BACKEND_UNAVAILABLE", backendDown(0), 0, {}, null, true);
   }
   const text = await response.text();
   let body: unknown = null;
@@ -67,7 +75,7 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   if (!response.ok) {
     const error = (body as ErrorResponse | null)?.error;
     if (!error) {
-      throw new ApiError("BACKEND_UNAVAILABLE", BACKEND_DOWN, response.status, {}, null, true);
+      throw new ApiError("BACKEND_UNAVAILABLE", backendDown(response.status), response.status, {}, null, true);
     }
     throw new ApiError(
       error.code,

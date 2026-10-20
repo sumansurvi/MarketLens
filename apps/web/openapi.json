@@ -922,7 +922,8 @@
           "CONTRADICTORY_EVIDENCE",
           "STALE_DATA",
           "VOICE_SESSION_EXPIRED",
-          "RUN_IN_PROGRESS"
+          "RUN_IN_PROGRESS",
+          "BACKEND_MISCONFIGURED"
         ],
         "title": "ErrorCode",
         "type": "string"

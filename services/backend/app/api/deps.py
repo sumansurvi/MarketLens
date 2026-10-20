@@ -7,6 +7,7 @@ import re
 from fastapi import Request
 from marketlens_core.errors import ErrorCode, MarketLensError
 
+from app.api.errors import backend_misconfigured
 from app.container import AppContainer
 
 RUN_ID_RE = re.compile(r"^run_[0-9a-f]{16}$")
@@ -14,7 +15,10 @@ BRIEF_ID_RE = re.compile(r"^brief_[0-9a-f]{16}$")
 
 
 def get_container(request: Request) -> AppContainer:
-    return request.app.state.container
+    container = getattr(request.app.state, "container", None)
+    if container is None:  # startup couldn't open the database (hosted, D-101)
+        raise backend_misconfigured(getattr(request.app.state, "startup_problems", []))
+    return container
 
 
 def get_session_id(request: Request) -> str:

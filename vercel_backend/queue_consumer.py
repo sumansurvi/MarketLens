@@ -9,7 +9,7 @@ The app container (database, MCP servers, model client) is built once per instan
 later deliveries on the same event loop.
 """
 
-# Importing this module runs vercel_backend/__init__.py first (import paths and Vercel defaults).
+# Importing this module runs vercel_backend/__init__.py first (import paths, Vercel marker).
 from __future__ import annotations
 
 import asyncio

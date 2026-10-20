@@ -46,6 +46,8 @@ class ErrorCode(StrEnum):
     STALE_DATA = "STALE_DATA"
     VOICE_SESSION_EXPIRED = "VOICE_SESSION_EXPIRED"
     RUN_IN_PROGRESS = "RUN_IN_PROGRESS"
+    # The backend is running but its setup is incomplete (configuration or database, D-101).
+    BACKEND_MISCONFIGURED = "BACKEND_MISCONFIGURED"
 
 
 _RETRYABLE = {
@@ -88,6 +90,7 @@ _HTTP_STATUS = {
     ErrorCode.STALE_DATA: 409,
     ErrorCode.VOICE_SESSION_EXPIRED: 410,
     ErrorCode.RUN_IN_PROGRESS: 409,
+    ErrorCode.BACKEND_MISCONFIGURED: 503,
 }
 
 
