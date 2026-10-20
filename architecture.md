@@ -473,6 +473,7 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
 - **Deployment (D-98):**
   - One Vercel project from `vercel.json`: services `web` (pages) and `backend` (`/api`), Vercel Queues for research runs, Postgres from the Marketplace (D-98, D-99). The steps are in `docs/DEPLOY_VERCEL.md`.
+  - The project's Framework Preset must be **Services**, with Root Directory `./`. With any other preset, Vercel ignores the `services` key and builds one app (D-100).
   - The earlier split (D-94: the web app on Vercel, the backend from `render.yaml` / `Dockerfile.backend`) remains an alternative.
   - The voice worker image (`Dockerfile.voice`) is kept for a later always-on host.
 - **`scripts/seed_demo.py`** (D-74): fixture-only, idempotent demo data, created through the public API and the confirmation flow.
@@ -812,6 +813,7 @@ Status on 2026-10-10, with later changes noted (last reviewed 2026-10-12). Evide
 - Vercel environment variables: https://vercel.com/docs/environment-variables
 - Vercel package managers (built-in pnpm stops at 10, hence the pinned `npx pnpm@12.10.1` in `vercel.json`): https://vercel.com/docs/package-managers
 - Vercel Services, bindings and routing (D-98): https://vercel.com/docs/services · https://vercel.com/docs/services/bindings · https://vercel.com/docs/services/routing
+- Vercel Services guide (Framework Preset **Services** required, D-100): https://vercel.com/kb/guide/vercel-services
 - Vercel Queues and its Python SDK (push subscribers, `[[tool.vercel.subscribers]]`): https://vercel.com/docs/queues/concepts · https://vercel.com/docs/queues/python-sdk
 - FastAPI on Vercel (entry point, lifespan): https://vercel.com/docs/frameworks/backend/fastapi
 - Vercel Functions limits (300 s on Hobby) and Daemons limits (why voice is off on Hobby): https://vercel.com/docs/functions/limitations · https://vercel.com/docs/daemons/limits

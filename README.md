@@ -222,6 +222,8 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 Research runs go through **Vercel Queues**: the backend publishes each run, and a private queue-triggered function (`vercel_backend/queue_consumer.py`) runs it. Data lives in **Postgres** (Neon from the Vercel Marketplace); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
 
+When you import the repository, set **Application Preset** to **Services**, leave Root Directory as `./`, ignore the "Import single project" buttons and click **Deploy**. Otherwise Vercel ignores the services and deploys one app (D-100).
+
 The step-by-step guide is [`docs/DEPLOY_VERCEL.md`](docs/DEPLOY_VERCEL.md). It also covers the earlier setup with the backend on Render (`render.yaml`, `Dockerfile.backend`). It is still one shared workspace with no user accounts.
 
 **Make and Docker:** `make start`, `make stop`, `make status`, `make run`, `make test` and `make evaluate` use the local toolchain, or Docker (`docker-compose.yml`) when uv, pnpm or Node are missing. Locally, `make start` and `make run` also start the voice worker when `.env` has `VOICE_MODE=livekit` (the Docker setup has no voice worker). Run `make help`.

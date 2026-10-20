@@ -25,10 +25,15 @@ Browser ─https┤               site password │ publishes each run       ▲
 ## 1. Create the Vercel project
 
 1. In Vercel choose **Add New › Project** and import the repository.
-2. Leave **Root Directory** as the repository root (`./`). The `vercel.json` there defines both services.
-   - If you imported the repository before with `apps/web` as the root, open Settings › Build and Deployment, clear **Root Directory**, and turn off any **Override** toggles.
-3. Under Git, set the **Production Branch** to the branch you deploy (for example `feature/vercel-services`, or `main` after merging).
-4. Click **Deploy**. The website appears. Research doesn't work yet, because the backend has no database (step 2).
+2. On the configuration screen, set **Application Preset** to **Services**. Some screens call it **Framework Preset**. This is the step that turns one import into two services.
+   - Vercel builds services only when the preset is **Services** *and* `vercel.json` has a `services` key. With any other preset, it ignores the `services` block and deploys one app. It often suggests Next.js because of `apps/web`.
+   - If the list doesn't offer **Services**, deploy anyway. Then set it under Settings › Build and Deployment › **Framework Preset** and redeploy.
+   - Below the preset, Vercel says "Multiple applications detected" and lists every folder that looks like an app, each with an **Import single project** button. Expect `web`, `backend`, `core`, the three MCP servers, `voice_agent` and a Python `app` at the root. **Don't click any of those buttons.** Each one imports that folder as a separate project. The list comes from Vercel's own scan, not from `vercel.json`, which defines just `web` and `backend`.
+3. Leave **Root Directory** as the repository root (`./`). The `vercel.json` there defines both services.
+   - If you imported the repository before with `apps/web` as the root, open Settings › Build and Deployment, set **Framework Preset** to **Services**, clear **Root Directory**, and turn off any **Override** toggles.
+4. Under Git, check that the **Production Branch** is the branch you deploy. `main` has had this setup since PR #4.
+5. Scroll past the list and click **Deploy** at the bottom of the page. The website appears. Research doesn't work yet, because the backend has no database ([section 2](#2-add-the-database)).
+6. Check that both services were built: the deployment's page shows a services graph with `web` and `backend`, and **Logs** lets you filter by service. If you see only one app, the preset isn't **Services** (see step 2).
 
 ## 2. Add the database
 
@@ -87,7 +92,8 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 
 | What you see | Where to look and what to do |
 |---|---|
-| Red "Backend unavailable" bar | Logs › `backend`: a configuration message names the variable to fix. If there are no `backend` logs at all, check that `vercel.json` is at the repository root and that Root Directory is `./`. |
+| The import or the deployment shows a single app (no `web` and `backend` services) | Settings › Build and Deployment › **Framework Preset** isn't **Services**. Set it, clear Root Directory (`./`), turn off any **Override** toggles, and redeploy. Vercel uses the `services` in `vercel.json` only with this preset. |
+| Red "Backend unavailable" bar | Logs › `backend`: a configuration message names the variable to fix. If there are no `backend` logs at all, check that Framework Preset is **Services**, that `vercel.json` is at the repository root and that Root Directory is `./`. |
 | "Backend unavailable" and the `backend` logs show `Invalid MarketLens configuration` | The message names the variable. Usually `DATABASE_URL` is missing (step 2), a live-mode key is missing, or `PROXY_SHARED_SECRET` is set (remove it). |
 | A research stays **Queued**, then fails with "didn't finish in time" | The queue consumer didn't run. In Logs, look for the consumer function and its errors. Check that `pyproject.toml` still has `[[tool.vercel.subscribers]]`. |
 | A research fails with "couldn't be queued" | The backend couldn't publish to Vercel Queues. The `backend` logs show why (for example an authentication error). |
@@ -110,6 +116,7 @@ Share the password only with people you trust. If you want a site anyone can ope
 
 ## How it fits together (for maintainers)
 
+- **Project settings:** Framework Preset **Services**, Root Directory `./`, no overrides. Without the Services preset, Vercel ignores the `services` key.
 - **`vercel.json`:**
   - service `web`: root `apps/web`; pnpm 12.10.1 through `npx`, because Vercel's own pnpm stops at 10; and a binding to `backend`, which sets `BACKEND_URL`;
   - service `backend`: root `./`, FastAPI, entry point `vercel_backend.asgi:app`;
