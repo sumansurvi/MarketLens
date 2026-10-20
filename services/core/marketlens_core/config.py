@@ -68,6 +68,9 @@ class Settings(BaseSettings):
     # voice worker's internal API must carry it in X-MarketLens-Proxy-Secret. The web app's proxy
     # adds it server-side, so only the deployed web app can reach the backend.
     proxy_shared_secret: SecretStr | None = None
+    # One Vercel project with /api routed straight to the backend (D-99): the backend asks for the
+    # same site password as the web app (HTTP Basic, any user name). Unset locally.
+    site_password: SecretStr | None = None
     # How research runs execute (D-98). inline: a background task in the backend process (local).
     # queue: the backend publishes each run to Vercel Queues and a queue-triggered function runs
     # it, because a Vercel Function can't keep working after it has answered (needs Postgres).
@@ -218,6 +221,11 @@ class Settings(BaseSettings):
         }
 
     @property
+    def site_password_value(self) -> str | None:
+        value = self.site_password.get_secret_value().strip() if self.site_password else ""
+        return value or None
+
+    @property
     def proxy_secret(self) -> str | None:
         value = self.proxy_shared_secret.get_secret_value().strip() if self.proxy_shared_secret else ""
         return value or None
@@ -229,12 +237,11 @@ class Settings(BaseSettings):
 
     def public_exposure_warnings(self) -> list[str]:
         warnings: list[str] = []
-        # On Vercel Services the backend has no public route (only the web app's binding reaches
-        # it, D-98), so a shared secret adds nothing there.
-        if self.app_env == "production" and not self.proxy_secret and not os.environ.get("VERCEL"):
+        if self.app_env == "production" and not self.proxy_secret and not self.site_password_value:
             warnings.append(
-                "APP_ENV=production without PROXY_SHARED_SECRET: anyone who finds this backend's URL can "
-                "run research on your API keys. Set the same PROXY_SHARED_SECRET here and on the web app."
+                "APP_ENV=production without SITE_PASSWORD or PROXY_SHARED_SECRET: anyone who can reach this "
+                "backend can run research on your API keys and read the research history. Set SITE_PASSWORD "
+                "(or, for a backend on its own host, the same PROXY_SHARED_SECRET here and on the web app)."
             )
         try:
             host_is_loopback = ipaddress.ip_address(self.backend_host).is_loopback
@@ -309,6 +316,12 @@ def validate_settings(settings: Settings) -> list[str]:
                 "LLM_MODE=openai requires OPENAI_MODEL (choose a currently supported model that supports "
                 "structured outputs). Model IDs are not hardcoded."
             )
+    if settings.proxy_secret is not None and os.environ.get("VERCEL"):
+        problems.append(
+            "PROXY_SHARED_SECRET must not be set when the backend runs on Vercel: /api goes straight from the "
+            "browser to the backend, which can't send it, so every API call would be refused. Remove it; "
+            "SITE_PASSWORD protects the API there."
+        )
     if settings.proxy_secret is not None and len(settings.proxy_secret) < 32:
         problems.append(
             "PROXY_SHARED_SECRET must be at least 32 characters (for example the output of `openssl rand -hex 32`)."

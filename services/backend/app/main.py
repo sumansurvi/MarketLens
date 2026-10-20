@@ -83,6 +83,7 @@ def create_app(settings: Settings, *, gateway: ToolGateway | None = None, llm: L
         max_body_bytes=settings.max_request_body_bytes,
         secure_cookie=settings.session_cookie_secure,
         proxy_secret=settings.proxy_secret,
+        site_password=settings.site_password_value,
     )
     install_error_handlers(app)
     app.include_router(health.router)

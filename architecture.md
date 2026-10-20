@@ -61,10 +61,11 @@ flowchart TD
   RS -.->|provider cache, live mode| DB
 ```
 
-- **Web → backend.** The browser talks only to the web app's own origin. A route handler (`apps/web/app/api/[...path]/route.ts`) forwards `/api/*` to `BACKEND_URL` at request time (a build-time rewrite until D-98). The HTTP-only session cookie stays first-party, and no backend address or key is in the browser bundle (D-06).
+- **Web → backend.** The browser talks only to one origin. Locally (and with a backend on its own host), a route handler (`apps/web/app/api/[...path]/route.ts`) forwards `/api/*` to `BACKEND_URL` at request time (a build-time rewrite until D-98). On Vercel, the project's routing sends `/api/*` straight to the backend service on the same address (D-99). The HTTP-only session cookie stays first-party, and no backend address or key is in the browser bundle (D-06).
 - **Hosted on Vercel (D-98)**, as one project with two Vercel Services (`vercel.json`):
-  - **`web`** (`apps/web`) is the only public service. Its binding to `backend` injects `BACKEND_URL` at runtime.
-  - **`backend`** (FastAPI, entry point `vercel_backend.asgi:app`) is internal. Each instance runs migrations under a Postgres advisory lock and starts the three MCP servers as child processes in its lifespan; on Vercel they inherit the backend's import path, and their logs go to stderr.
+  - **Routing (D-99):** `/api/(.*)` → **`backend`** (FastAPI, entry point `vercel_backend.asgi:app`), then `/(.*)` → **`web`** (`apps/web`). Both are public on one address, so the session cookie stays first-party. `web` keeps a binding to `backend` (`BACKEND_URL`) for its `/api` forwarding route, which on Vercel isn't reached.
+  - **Site password on both (D-99):** `proxy.ts` checks `SITE_PASSWORD` for pages, and the backend middleware checks it for `/api` (HTTP Basic; browsers resend the credentials they entered, so visitors sign in once). `PROXY_SHARED_SECRET` is refused on Vercel, because browsers can't send it.
+  - **`backend`:** each instance runs migrations under a Postgres advisory lock and starts the three MCP servers as child processes in its lifespan; on Vercel they inherit the backend's import path, and their logs go to stderr.
   - A Vercel Function can't keep working after it answers, so research runs execute through **Vercel Queues** (`RUN_EXECUTION=queue`):
     - `QueueRunManager` publishes `{run_id}` before answering.
     - The private subscriber `vercel_backend.queue_consumer` runs it with `run_consumer.run_queued_research`. That claims the run atomically (at-least-once delivery), executes the same `ResearchWorkflowService`, and watches the run row for a cancel request.
@@ -111,7 +112,7 @@ Dockerfile, docker-compose.yml    optional Docker toolchain for running the app 
 Dockerfile.backend                production backend image (FastAPI plus the three MCP servers it spawns; SQLite on /data)
 Dockerfile.voice                  optional voice worker image (LiveKit agent, no inbound port)
 render.yaml                       Render Blueprint: the backend from Dockerfile.backend with a disk, demo mode, a generated proxy secret (D-94)
-vercel.json                       Vercel Services: web (public) and backend (internal, bound to web) (D-98)
+vercel.json                       Vercel Services: web (pages) and backend (/api), one address (D-98, D-99)
 vercel_backend/                   the backend's Vercel entry points: asgi.py (the app) and queue_consumer.py (research runs)
 scripts/run_queue_consumer.py     local stand-in for Vercel Queues delivery (queue-mode rehearsal)
 apps/web/proxy.ts                 optional site password, and the backend shared secret added to /api requests (D-94)
@@ -136,7 +137,7 @@ Python is one uv workspace: a root `pyproject.toml` and one lockfile covering ev
 | Separate pages: research home, run page, saved briefs, watchlist, settings | One chat-style screen: history rail on the left, the run in the middle, quick starts on the right, and a one-line research bar (ticker dropdown, dictation, voice session) docked at the bottom. Run details and comparisons open as dialogs. Saved briefs, the watchlist and data status have no UI (API only); `/research/[runId]` still opens a run | D-78, D-81, D-82, D-83 |
 | OpenAI as the only real model | Any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, so a free local model (Ollama) works without a key | D-76 |
 | Alpha Vantage requests limited per process (D-40) | Pacing shared by every process through SQLite, one upstream call for identical concurrent requests, one retry after a per-second rejection, and the daily quota reported as such | D-77 |
-| Deployment notes only; the app runs locally | One Vercel project (D-98): Services `web` (public) and `backend` (internal, bound), research runs on Vercel Queues, Postgres from the Marketplace, voice off. Before that (D-94): Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94, D-98 |
+| Deployment notes only; the app runs locally | One Vercel project (D-98, D-99): Services `web` (pages) and `backend` (`/api`), both behind `SITE_PASSWORD`; research runs on Vercel Queues, Postgres from the Marketplace, voice off. Before that (D-94): Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94, D-98, D-99 |
 
 ## 3. Components and responsibilities
 
@@ -218,7 +219,7 @@ services/backend/app/
     compare.py            period comparison
     voice.py              voice sessions and the worker's internal API (hidden from OpenAPI)
     analytics.py          local analytics events and summary
-    middleware.py         request IDs, server-owned session cookie (Secure in production), proxy shared secret, body-size limit, response headers
+    middleware.py         request IDs, server-owned session cookie (Secure in production), proxy shared secret or site password, body-size limit, response headers
     errors.py             one error envelope: stable code, safe message, request ID, no stack traces
     schemas.py, deps.py   HTTP response contracts (the source of the web types); FastAPI dependencies
   services/
@@ -282,7 +283,8 @@ services/backend/app/
 **Rules that apply to every route:**
 - State-changing requests need the `X-MarketLens-Client` header, a CSRF defense (D-37).
 - The server owns an HTTP-only `SameSite=Lax` session cookie, which is also `Secure` with `APP_ENV=production` (D-94).
-- With `PROXY_SHARED_SECRET` set, every `/api` request except `/api/health` and the voice worker's internal API must carry `X-MarketLens-Proxy-Secret`, or it gets a 403. The web app's proxy adds the header (D-94).
+- With `PROXY_SHARED_SECRET` set (a backend on its own host), every `/api` request except `/api/health` and the voice worker's internal API must carry `X-MarketLens-Proxy-Secret`, or it gets a 403. The web app's proxy adds the header after checking the site password (D-94).
+- Without a secret but with `SITE_PASSWORD` set (one Vercel project, `/api` routed straight to the backend), the same requests must carry the site password as HTTP Basic credentials, or they get a 401 with `WWW-Authenticate` (D-99).
 - Request bodies are capped at `MAX_REQUEST_BODY_BYTES` (default 64 KiB) with a 413, streamed bodies included (D-71).
 - CORS allows only `FRONTEND_ORIGIN`.
 - Every error uses the same envelope.
@@ -470,7 +472,7 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - `make start` seeds the demo data unless `.env` selects live data or a real model.
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
 - **Deployment (D-98):**
-  - One Vercel project from `vercel.json`: services `web` and `backend`, Vercel Queues for research runs, Postgres from the Marketplace. The steps are in `docs/DEPLOY_VERCEL.md`.
+  - One Vercel project from `vercel.json`: services `web` (pages) and `backend` (`/api`), Vercel Queues for research runs, Postgres from the Marketplace (D-98, D-99). The steps are in `docs/DEPLOY_VERCEL.md`.
   - The earlier split (D-94: the web app on Vercel, the backend from `render.yaml` / `Dockerfile.backend`) remains an alternative.
   - The voice worker image (`Dockerfile.voice`) is kept for a later always-on host.
 - **`scripts/seed_demo.py`** (D-74): fixture-only, idempotent demo data, created through the public API and the confirmation flow.

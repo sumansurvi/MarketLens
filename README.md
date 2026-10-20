@@ -214,9 +214,11 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 ## Deployment notes
 
-**Go live on Vercel (one project, free Hobby plan, D-98):** [`vercel.json`](vercel.json) defines two Vercel Services.
-- **`web`** (`apps/web`) is public. It forwards `/api/*` to the backend over a private binding (`apps/web/app/api/[...path]/route.ts`), and `SITE_PASSWORD` can lock it.
-- **`backend`** (FastAPI and its MCP servers, entry point `vercel_backend/asgi.py`) is internal.
+**Go live on Vercel (one project, free Hobby plan, D-98, D-99):** [`vercel.json`](vercel.json) defines two Vercel Services on one address.
+- **`web`** (`apps/web`) serves the pages.
+- **`backend`** (FastAPI and its MCP servers, entry point `vercel_backend/asgi.py`) serves `/api`.
+
+`SITE_PASSWORD` locks both: the website checks it for pages and the backend for `/api`, and visitors sign in once.
 
 Research runs go through **Vercel Queues**: the backend publishes each run, and a private queue-triggered function (`vercel_backend/queue_consumer.py`) runs it. Data lives in **Postgres** (Neon from the Vercel Marketplace); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
 
