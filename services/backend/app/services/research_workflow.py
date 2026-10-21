@@ -398,9 +398,17 @@ class ResearchWorkflowService:
         contradictions = [c.as_dict() for c in detect_contradictions(bundle, derived)]
         ctx = FixtureContext(composer=composer, ledger=bundle.ledger, window=window, contradictions=contradictions)
         semaphore = asyncio.Semaphore(self.settings.max_parallel_specialists)
-        results = await asyncio.gather(
-            *(self._run_specialist(spec, runtime, bundle, run.question, ctx, steps, semaphore) for spec in SPECIALISTS)
-        )
+        tasks = [
+            asyncio.ensure_future(self._run_specialist(spec, runtime, bundle, run.question, ctx, steps, semaphore))
+            for spec in SPECIALISTS
+        ]
+        try:
+            results = await asyncio.gather(*tasks)
+        except BaseException:
+            # One failed model step ends the run (live data, D-104): the others must not keep calling the model.
+            for task in tasks:
+                task.cancel()
+            raise
         allocator = ClaimAllocator()
         specialist_claims: list[ResearchClaim] = []
         scope_notes: list[str] = []
@@ -431,6 +439,8 @@ class ResearchWorkflowService:
                 runtime, bundle, run.question, pre.kept, contradictions, ctx
             )
         except MarketLensError as exc:
+            if not self.settings.is_fixture_data:
+                raise self._stop_on_model_failure(steps, synth_step, "research supervisor", exc) from exc
             synthesis, synth_truncated, synthesis_error = supervisor.fallback_synthesis(ctx), 0, exc
         if synth_truncated:
             scope_notes.append(
@@ -468,6 +478,8 @@ class ResearchWorkflowService:
         try:
             review_output = await evidence_reviewer.review(runtime, bundle, draft_claims, report, contradictions, ctx)
         except MarketLensError as exc:
+            if not self.settings.is_fixture_data:
+                raise self._stop_on_model_failure(steps, review_step, "evidence review", exc) from exc
             review_output, review_error = None, exc
         reviewed = evidence_reviewer.apply_review(report, review_output, contradictions, bundle.ledger)
         withheld = pre.withheld + reviewed.withheld
@@ -537,6 +549,16 @@ class ResearchWorkflowService:
             errors=errors,
         )
 
+    def _stop_on_model_failure(
+        self, steps: StepRecorder, step: object, what: str, exc: MarketLensError
+    ) -> MarketLensError:
+        """Live data (D-104): a model step that can't complete ends the run; nothing is summarized in its place.
+
+        The step is recorded as failed with the provider's reason, and the run fails with it."""
+        message = f"The {what} model step couldn't complete. {exc.message}"
+        steps.finish(step, StepStatus.FAILED, message, error_code=exc.code)  # type: ignore[arg-type]
+        return MarketLensError(exc.code, message, retryable=exc.retryable, details=exc.details)
+
     async def _run_specialist(
         self,
         spec: SpecialistSpec,
@@ -552,6 +574,8 @@ class ResearchWorkflowService:
             try:
                 output, truncated = await spec.analyze(runtime, bundle, question, ctx)
             except MarketLensError as exc:
+                if not self.settings.is_fixture_data:
+                    raise self._stop_on_model_failure(steps, step, spec.agent.replace("_", " "), exc) from exc
                 steps.finish(
                     step,
                     StepStatus.FAILED,

@@ -87,7 +87,9 @@ The hosted site shows real data only (D-104). Without these settings it refuses 
 | `OPENAI_MODEL` | a hosted model that supports structured outputs |
 | `RUN_TIMEOUT_SECONDS` | `240` (the limit is 280 on Hobby) |
 
-Don't copy `OPENAI_BASE_URL` from your `.env`: it points at a model on your computer, which Vercel can't reach. `NEWS_FALLBACK` (Yahoo Finance headlines, no key) is on by default.
+Don't copy `OPENAI_BASE_URL` or `OPENAI_MODEL` from your `.env`. `OPENAI_BASE_URL` points at a model on your computer, which Vercel can't reach, and the local `qwen2.5:7b` isn't an OpenAI model, so OpenAI answers every call with "does not exist". Use an OpenAI model name. The key's account needs credit, or every call fails with "no credit left".
+
+A model step that can't complete now ends the run with the provider's reason (D-105). Nothing is summarized in its place, so a hosted research is either complete or failed. `NEWS_FALLBACK` (Yahoo Finance headlines, no key) is on by default.
 
 Runs made from demo data before this setting (they are in the database) are hidden from the hosted site and are not deleted. Live mode never shows them, in the history, the search, or a direct link (D-104).
 
@@ -119,6 +121,7 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes, or the function's 300 s limit). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
 | Older runs show "didn't pick the run up" or "couldn't be started" | Runs from the queue setup (D-102) and before D-103. Press Re-run. |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
+| A run says "The AI model couldn't finish, so no brief was written" | The page shows the provider's reason. "does not exist": fix `OPENAI_MODEL`. "no credit left": add billing at platform.openai.com. "rejected the API key": fix `OPENAI_API_KEY`. "could not be reached": remove `OPENAI_BASE_URL` on Vercel. Then press Re-run. |
 | Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
 ## What is protected, and what isn't
