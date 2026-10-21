@@ -17,12 +17,17 @@ import logging
 
 from marketlens_core.config import Settings
 from marketlens_core.db.repositories import RunRepository
+from marketlens_core.errors import ErrorCode
 from marketlens_core.models import TERMINAL_RUN_STATUSES, RunStatus
 from marketlens_core.timeutil import utc_now
 
 from app.services.research_workflow import ResearchWorkflowService
 
 logger = logging.getLogger("marketlens.runs")
+
+# Longer than the queue client's own 10 s request timeout, so a slow publish is reported by the client first.
+# The page waits for this answer, so it must not run on (D-102).
+PUBLISH_TIMEOUT_SECONDS = 15.0
 
 # A queued or running run older than its time limit plus this margin can no longer finish.
 STALE_MARGIN_SECONDS = 120
@@ -87,14 +92,27 @@ class QueueRunManager:
         return self._client
 
     async def start(self, run_id: str) -> None:
-        """Publish before answering: on Vercel nothing runs after the response has been sent."""
+        """Publish before answering: on Vercel nothing runs after the response has been sent.
+
+        Bounded: a publish that hangs fails the run at once with a reason, instead of leaving the
+        page waiting (D-102).
+        """
+        topic = self.settings.research_queue_topic
         try:
-            await self._queue().send(  # type: ignore[attr-defined]
-                self.settings.research_queue_topic, {"run_id": run_id}, idempotency_key=run_id
+            await asyncio.wait_for(
+                self._queue().send(topic, {"run_id": run_id}, idempotency_key=run_id),  # type: ignore[attr-defined]
+                timeout=PUBLISH_TIMEOUT_SECONDS,
             )
-        except Exception:  # noqa: BLE001 - any queue failure leaves a clear, failed run
-            logger.exception("could not publish research run %s", run_id)
-            self.runs.fail_run(run_id, "The research run couldn't be queued. Try again in a moment.")
+        except Exception:  # noqa: BLE001 - any queue failure (or timeout) leaves a clear, failed run
+            logger.exception("could not publish research run %s to %s", run_id, topic)
+            self.runs.fail_run(
+                run_id,
+                "The research run couldn't be queued. Try again in a moment.",
+                code=ErrorCode.RESEARCH_QUEUE_UNAVAILABLE,
+                retryable=True,
+            )
+            return
+        logger.info("research run %s published to %s", run_id, topic)
 
     def is_active(self, run_id: str) -> bool:
         run = self.runs.get_run(run_id)

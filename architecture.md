@@ -6,7 +6,7 @@
 **Implementation languages:** TypeScript (Next.js web app) and Python (backend, MCP servers, voice worker)  
 **Database:** SQLite locally · Postgres when hosted on Vercel (D-98)  
 **Status:** Implemented. All phase gates (0–7) have passed. Since then, live data (a free Alpha Vantage key, SEC EDGAR and Yahoo Finance headlines), a free local model (Ollama) and spoken voice sessions (LiveKit Cloud) have run on the development machine; OpenAI's hosted API has not (no key). See [`PROJECT_STATUS.md`](PROJECT_STATUS.md).  
-**Last documentation review:** 2026-10-16 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing and PDF, voice with Lens, quick guide, research search, Vercel deployment as one project with Postgres and Vercel Queues; D-80 to D-98)
+**Last documentation review:** 2026-10-21 (chat-style workspace, ticker search, latest-only figures, news fallback, readable sources, sharing and PDF, voice with Lens, quick guide, research search, Vercel deployment as one project with Postgres and Vercel Queues; D-80 to D-98)
 
 > **How to read this document.**
 > - **§1–§5** describe the system as built. Where the build deliberately differs from the original plan, the text says so and cites the decision (D-xx) in [`PROJECT_STATUS.md` › Decision log](PROJECT_STATUS.md#4-decision-log). §2.2 collects those differences in one table.
@@ -71,7 +71,13 @@ flowchart TD
   - A Vercel Function can't keep working after it answers, so research runs execute through **Vercel Queues** (`RUN_EXECUTION=queue`):
     - `QueueRunManager` publishes `{run_id}` before answering.
     - The private subscriber `vercel_backend.queue_consumer` runs it with `run_consumer.run_queued_research`. That claims the run atomically (at-least-once delivery), executes the same `ResearchWorkflowService`, and watches the run row for a cancel request.
-    - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`).
+    - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`). Each gets its own reason: `RESEARCH_NOT_STARTED` (never picked up) or `RESEARCH_TIMED_OUT` (started, never finished). 
+    - **Failures say why (D-102).** Every run that stops without a brief carries a code the page explains, with Re-run:
+      - `RESEARCH_QUEUE_UNAVAILABLE`: the publish failed or took longer than 15 s (`PUBLISH_TIMEOUT_SECONDS`), so the start request answers at once instead of hanging.
+      - `RESEARCH_NOT_STARTED` and `RESEARCH_TIMED_OUT`: the sweep above.
+      - `RESEARCH_STOPPED`: the consumer failed on its last delivery (three in all, 30 s apart). The failure is recorded at once, and the consumer's logs hold the traceback.
+    - The consumer logs its load and every delivery (`research run … delivery N of 3`), so the runtime logs show whether Vercel delivers runs at all.
+    - The web app bounds its calls: 30 s by default and 45 s for starting a run. A call that times out says so and returns the button to ↑.
   - **State is in Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler), shared by every instance and the MCP servers.
   - **Voice is off** in the hosted version: it needs an always-on worker (a Pro-plan Daemon).
   - **Earlier hosting (D-94), still supported:** the web app alone on Vercel, and the backend on a container host (`render.yaml`, `Dockerfile.backend`, SQLite on a disk, research inline).

@@ -108,8 +108,12 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | Red bar "The MarketLens backend failed to answer (HTTP 500)" | The backend crashed before it could answer. Look in Logs › `backend`. If there are no `backend` logs at all, check that Framework Preset is **Services**, that `vercel.json` is at the repository root and that Root Directory is `./`. |
 | "The … MCP server is unavailable" | `/api/health` shows each server's `last_error`. Send it with the `backend` logs. A log folder the function can't write no longer stops the servers (D-101). |
 | `/api/health` warns "… is set in the project's environment variables but ignored on Vercel" | Delete that variable in Settings › Environment Variables. It does no harm, but it doesn't belong there. |
-| A research stays **Queued**, then fails with "didn't finish in time" | The queue consumer didn't run. In Logs, look for the consumer function and its errors. Check that `pyproject.toml` still has `[[tool.vercel.subscribers]]`. |
-| A research fails with "couldn't be queued" | The backend couldn't publish to Vercel Queues. The `backend` logs show why (for example an authentication error). |
+| The start button spins, then the bar says "The request took too long" | The backend didn't answer within 45 s. Check the `backend` logs for `could not publish research run` (the publish timed out or failed; the log names the error). The run page shows the outcome too, so check the history before starting the same research again. |
+| A run says "The run couldn't be started" (`RESEARCH_QUEUE_UNAVAILABLE`) | The backend couldn't publish to Vercel Queues within 15 s. The `backend` logs show `could not publish research run … ` with the cause (for example an authentication error). Press Re-run once that is fixed. |
+| A run says "The research service didn't pick the run up" (`RESEARCH_NOT_STARTED`) | The message was published, but no consumer started it before the time limit. Check the consumer's logs, next row. |
+| A run says "The research service stopped unexpectedly" (`RESEARCH_STOPPED`) | The consumer failed on its last attempt; the consumer's logs have the traceback (`research run … delivery 3 of 3 failed`). |
+| Consumer logs: no `research consumer loaded` line and no `research run … delivery` lines | Vercel didn't build the consumer. Check the build log for the subscriber, that `pyproject.toml` still has `[[tool.vercel.subscribers]]` with `entrypoint = "vercel_backend.queue_consumer"`, and that the deployment's Functions list includes it. A deployment only runs the consumer that it built. |
+| A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
 | Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
@@ -147,9 +151,11 @@ Share the password only with people you trust. If you want a site anyone can ope
 - **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. On Vercel `/api` never reaches the website, so this matters for local runs and the backend-on-its-own-host setup. The binding stays as a fallback for that route (a build-time rewrite couldn't use it).
 - **Site password on the backend** (`app/api/middleware.py`, D-99): with `SITE_PASSWORD` set and no `PROXY_SHARED_SECRET`, every `/api` request except `/api/health` must carry it as HTTP Basic credentials. With a secret, the backend trusts the website, which checked the password, and ignores direct calls.
 - **Research execution:** `RUN_EXECUTION=queue`.
-  - `QueueRunManager` publishes `{run_id}` before answering.
+  - `QueueRunManager` publishes `{run_id}` before answering, with a 15 s limit. A publish that fails or times out marks the run `RESEARCH_QUEUE_UNAVAILABLE` at once (D-102).
+  - `vercel_backend/queue_consumer.py` logs the consumer's load and each delivery (`research run … delivery N of 3`). A failed delivery is retried by Vercel Queues (30 s apart, three in all). On the last one the run is marked `RESEARCH_STOPPED` with a reason.
   - `run_consumer.run_queued_research` claims the run atomically, runs it, and watches the database for cancellation.
-  - Runs left queued or running past their limit are marked failed when anyone looks.
+  - Runs still queued past their limit are marked `RESEARCH_NOT_STARTED`; runs still running past theirs are marked `RESEARCH_TIMED_OUT`. Both are checked whenever runs are read.
+  - The web app bounds every API call (30 s, 45 s for starting a run), so the page never waits forever.
 - **Postgres:** `migrations_postgres/` mirrors `migrations/` with the same version numbers. Writes take one advisory lock, so they are serialized as in SQLite.
 - **Local rehearsal:** see [TESTING_GUIDE](TESTING_GUIDE.md) §7.
 

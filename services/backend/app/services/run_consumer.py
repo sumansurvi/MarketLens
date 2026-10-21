@@ -12,6 +12,7 @@ import asyncio
 import logging
 
 from marketlens_core.db.repositories import RunRepository
+from marketlens_core.errors import ErrorCode
 from marketlens_core.models import RunStatus
 
 from app.services.research_workflow import ResearchWorkflowService
@@ -33,7 +34,12 @@ async def run_queued_research(
     if not runs.claim_queued_run(run_id):
         run = runs.get_run(run_id)
         if run is not None and run.status == RunStatus.RUNNING and delivery_count > 1:
-            runs.fail_run(run_id, "The research run was interrupted before it finished. Try again.")
+            runs.fail_run(
+                run_id,
+                "The research run was interrupted before it finished. Try again.",
+                code=ErrorCode.RESEARCH_STOPPED,
+                retryable=True,
+            )
             return "interrupted"
         return "skipped"
 

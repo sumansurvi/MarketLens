@@ -41,16 +41,34 @@ function backendDown(status: number): string {
   return `The MarketLens backend failed to answer (HTTP ${status}). If you run this site, its backend logs say why.`;
 }
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const TOOK_TOO_LONG =
+  "The request took too long, so it may not have gone through. Check the research history, then try again.";
+
 /**
  * Same-origin JSON call to the backend (proxied by Next.js). Errors always surface as
- * ApiError with the server's stable code and safe message.
+ * ApiError with the server's stable code and safe message. A call that never answers fails
+ * after `timeoutMs` instead of leaving the page waiting (D-102).
  */
-export async function api<T>(path: string, init: RequestInit & { json?: unknown } = {}): Promise<T> {
-  const { json, headers, ...rest } = init;
+export async function api<T>(
+  path: string,
+  init: RequestInit & { json?: unknown; timeoutMs?: number } = {},
+): Promise<T> {
+  const { json, headers, timeoutMs = DEFAULT_TIMEOUT_MS, ...rest } = init;
+  // Our own timer, not AbortSignal.timeout(), which older browsers lack (and would fail every call).
+  const timeout = rest.signal ? null : new AbortController();
+  let timedOut = false;
+  const timer = timeout
+    ? setTimeout(() => {
+        timedOut = true;
+        timeout.abort();
+      }, timeoutMs)
+    : undefined;
   let response: Response;
   try {
     response = await fetch(path, {
       ...rest,
+      signal: rest.signal ?? timeout?.signal,
       headers: {
         Accept: "application/json",
         // Required by the backend for state-changing requests (CSRF defense in depth).
@@ -63,7 +81,10 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
       cache: "no-store",
     });
   } catch {
+    if (timedOut) throw new ApiError("REQUEST_TIMEOUT", TOOK_TOO_LONG, 0, {}, null, true);
     throw new ApiError("BACKEND_UNAVAILABLE", backendDown(0), 0, {}, null, true);
+  } finally {
+    clearTimeout(timer);
   }
   const text = await response.text();
   let body: unknown = null;

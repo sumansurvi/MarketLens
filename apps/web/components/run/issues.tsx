@@ -42,6 +42,8 @@ function stepList(errors: RunError[]): string {
 interface Context {
   /** Total statements the fact-check set aside (key and supporting), from the brief's review. */
   withheld?: number;
+  /** The run failed without a brief, so its errors say why nothing was written. */
+  failed?: boolean;
 }
 
 function describe(code: string, errors: RunError[], context: Context): Omit<Issue, "code" | "categories" | "raw" | "retryable"> {
@@ -130,7 +132,50 @@ function describe(code: string, errors: RunError[], context: Context): Omit<Issu
       return { tone: "warning", icon: "🕰", title: "Some data is out of date", body: naturalize(messages), tip: "Check the as-of dates on each section." };
     case "CONTRADICTORY_EVIDENCE":
       return { tone: "warning", icon: "⚖", title: "Sources disagree", body: naturalize(messages), tip: "Both sources are cited; the affected statements are marked." };
+    case "RESEARCH_NOT_STARTED":
+      return {
+        tone: "warning",
+        icon: "⏳",
+        title: "The research service didn't pick the run up",
+        body: "The request was accepted, but no worker started it in time, so nothing was researched.",
+        tip: "Press Re-run to try again.",
+      };
+    case "RESEARCH_TIMED_OUT":
+      return {
+        tone: "warning",
+        icon: "⏱",
+        title: "The run ran out of time",
+        body: "It was stopped before it could finish.",
+        tip: "Press Re-run to try again.",
+      };
+    case "RESEARCH_QUEUE_UNAVAILABLE":
+      return {
+        tone: "warning",
+        icon: "🔌",
+        title: "The run couldn't be started",
+        body: "The research service didn't accept the request, so nothing was researched.",
+        tip: "Press Re-run in a moment.",
+      };
+    case "RESEARCH_STOPPED":
+      return {
+        tone: "warning",
+        icon: "⚠",
+        title: "The research service stopped unexpectedly",
+        body: "The run was stopped before it could finish.",
+        tip: "Press Re-run to try again.",
+      };
     default:
+      // Runs that failed before these reasons existed still say what happened, not a vague limit.
+      if (context.failed) {
+        return {
+          tone: "warning",
+          icon: "⚠",
+          title: "The research stopped before it finished",
+          // Older messages end with "Try again.", which the tip below already says.
+          body: naturalize(messages).replace(/\s*Try again\.?$/i, ""),
+          tip: "Press Re-run to try again.",
+        };
+      }
       return { tone: "warning", icon: "⚠", title: "Something limited this report", body: naturalize(messages) };
   }
 }

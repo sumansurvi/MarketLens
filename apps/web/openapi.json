@@ -923,7 +923,11 @@
           "STALE_DATA",
           "VOICE_SESSION_EXPIRED",
           "RUN_IN_PROGRESS",
-          "BACKEND_MISCONFIGURED"
+          "BACKEND_MISCONFIGURED",
+          "RESEARCH_QUEUE_UNAVAILABLE",
+          "RESEARCH_NOT_STARTED",
+          "RESEARCH_TIMED_OUT",
+          "RESEARCH_STOPPED"
         ],
         "title": "ErrorCode",
         "type": "string"

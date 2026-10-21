@@ -8,6 +8,7 @@ it. These tests use SQLite (the logic is the same; production requires Postgres,
 from __future__ import annotations
 
 import asyncio
+import time
 import uuid
 from functools import partial
 
@@ -138,7 +139,45 @@ def test_interrupted_and_stale_runs_are_marked_failed(database_url) -> None:
             )
         listed = {r["run_id"]: r for r in client.get("/api/research").json()["runs"]}
         assert listed[stale["run_id"]]["status"] == "failed"
-        assert "didn't finish in time" in listed[stale["run_id"]]["errors"][0]["message"]
+        not_started = listed[stale["run_id"]]["errors"][0]
+        assert not_started["code"] == "RESEARCH_NOT_STARTED" and not_started["retryable"] is True
+        assert "didn't start" in not_started["message"]
+
+        # A run that started but never finished says so: that is a different problem (D-102).
+        running = client.post("/api/research", json=REQUEST).json()["run"]
+        assert container.runs.claim_queued_run(running["run_id"])
+        with container.db.write() as conn:
+            conn.execute(
+                "UPDATE research_runs SET started_at = ? WHERE run_id = ?", ("2000-01-01T00:00:00Z", running["run_id"])
+            )
+        listed = {r["run_id"]: r for r in client.get("/api/research").json()["runs"]}
+        assert listed[running["run_id"]]["status"] == "failed"
+        timed_out = listed[running["run_id"]]["errors"][0]
+        assert timed_out["code"] == "RESEARCH_TIMED_OUT" and "didn't finish in time" in timed_out["message"]
+    finally:
+        client.__exit__(None, None, None)
+
+
+def test_a_publish_that_hangs_fails_the_run_at_once(database_url, monkeypatch) -> None:
+    """The page waits for the start request, so a queue that never answers must not hold it (D-102)."""
+    import app.services.run_manager as run_manager
+
+    monkeypatch.setattr(run_manager, "PUBLISH_TIMEOUT_SECONDS", 0.2)
+
+    class HangingQueue:
+        async def send(self, topic: str, payload: dict[str, str], *, idempotency_key: str | None = None) -> str:
+            await asyncio.sleep(60)
+            return "never"
+
+    client = queue_client(queue_settings(database_url), HangingQueue())
+    try:
+        started = time.monotonic()
+        run = client.post("/api/research", json=REQUEST).json()["run"]
+        assert time.monotonic() - started < 10
+        detail = client.get(f"/api/research/{run['run_id']}").json()["run"]
+        assert detail["status"] == "failed"
+        assert detail["errors"][0]["code"] == "RESEARCH_QUEUE_UNAVAILABLE"
+        assert detail["errors"][0]["retryable"] is True
     finally:
         client.__exit__(None, None, None)
 

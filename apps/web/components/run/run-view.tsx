@@ -63,7 +63,7 @@ export function RunView({ runId }: { runId: string }) {
 
   const { run, brief } = data;
   const active = !TERMINAL.has(run.status) || data.is_active;
-  const issues = active ? [] : describeIssues(run.errors, { withheld: brief?.review.withheld });
+  const issues = active ? [] : describeIssues(run.errors, { withheld: brief?.review.withheld, failed: run.status === "failed" });
 
   async function cancel() {
     setBusy(true);
@@ -142,7 +142,15 @@ export function RunView({ runId }: { runId: string }) {
 
       {active && <RunProgress detail={data} onCancel={cancel} cancelling={busy} />}
 
-      {!active && <HeadsUp issues={issues} failed={run.status === "failed"} onRetry={runAgain} retrying={busy} />}
+      {/* A failed run has one retry: Re-run in the header, which the card's text points to. */}
+      {!active && (
+        <HeadsUp
+          issues={issues}
+          failed={run.status === "failed"}
+          onRetry={run.status === "failed" ? undefined : runAgain}
+          retrying={busy}
+        />
+      )}
 
       {run.status === "cancelled" && <Notice title="Run cancelled">No report was produced. Use Re-run to start a new run.</Notice>}
 

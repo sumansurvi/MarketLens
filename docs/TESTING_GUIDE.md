@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `385 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
+| `make test` | `390 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -294,7 +294,15 @@ The thorough versions of the security checks run automatically in `make test`: e
   - cancelling before and during a run;
   - interrupted and stale runs;
   - the Postgres requirement;
-  - the Vercel Queues SDK delivering a published run to a subscriber (its in-process queue service).
+  - the Vercel Queues SDK delivering a published run to a subscriber (its in-process queue service);
+  - a publish that hangs fails the run at once, with a reason (D-102);
+  - stale queued runs and stale running runs get different reasons (D-102).
+- **The production consumer, automated (D-102):** `uv run pytest tests/integration/test_queue_consumer.py` covers:
+  - the trigger the Vercel build reads from `vercel_backend.queue_consumer` (topic, three attempts, 30 s apart);
+  - an early failure is raised, so Vercel Queues retries it;
+  - the last failed delivery records the run as failed with `RESEARCH_STOPPED`;
+  - a published run is delivered through the SDK's push path to the real consumer and completes.
+  - Run this file also against Postgres (`MARKETLENS_TEST_POSTGRES_URL`), as the production database is Postgres.
 - **Queue mode, by hand (a local rehearsal of the Vercel setup):**
   1. `uv run python -m vercel.queue.devserver --port 8790` (the SDK's local Vercel Queues).
   2. In two more terminals, set:
@@ -337,6 +345,7 @@ The thorough versions of the security checks run automatically in `make test`: e
   - empty variables meaning the default, and invalid values reported by name, never by value;
   - a 503 `BACKEND_MISCONFIGURED` naming the fix for an invalid configuration or an unreachable database on Vercel (with the Supabase pooler hint and no password in the message), while locally both still stop startup;
   - MCP servers starting when their log folder can't be created, a dead supervisor recording why, and `/api/data-status` not hanging on servers that don't answer.
+- **Checking the failure messages on screen (D-102), by hand:** create a run, mark it failed with each reason (`fail_run` with `RESEARCH_TIMED_OUT`, `RESEARCH_NOT_STARTED`, `RESEARCH_QUEUE_UNAVAILABLE`, `RESEARCH_STOPPED`, and an older `INTERNAL_ERROR` run), then open `/?run=<id>` in the web app. Each card should give its plain reason, "What you can do: Press Re-run to try again.", and a single **Re-run** button in the header. The start button should return to ↑ after at most 45 s when the backend doesn't answer.
 - **The first live deploy's failure, rehearsed by hand (D-101):** repeat the queue-mode rehearsal above with two changes:
   - start the backend and the consumer from a **read-only copy** of the repository (`git ls-files -co --exclude-standard` copied elsewhere, then `chmod -R a-w`);
   - put **every `.env.example` value** in their environment, plus `VERCEL=1` and the Postgres and queue variables.

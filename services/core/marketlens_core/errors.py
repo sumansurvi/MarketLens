@@ -48,6 +48,11 @@ class ErrorCode(StrEnum):
     RUN_IN_PROGRESS = "RUN_IN_PROGRESS"
     # The backend is running but its setup is incomplete (configuration or database, D-101).
     BACKEND_MISCONFIGURED = "BACKEND_MISCONFIGURED"
+    # Why a research run stopped without a brief (D-102): shown on the run with Re-run.
+    RESEARCH_QUEUE_UNAVAILABLE = "RESEARCH_QUEUE_UNAVAILABLE"
+    RESEARCH_NOT_STARTED = "RESEARCH_NOT_STARTED"
+    RESEARCH_TIMED_OUT = "RESEARCH_TIMED_OUT"
+    RESEARCH_STOPPED = "RESEARCH_STOPPED"
 
 
 _RETRYABLE = {
@@ -91,6 +96,10 @@ _HTTP_STATUS = {
     ErrorCode.VOICE_SESSION_EXPIRED: 410,
     ErrorCode.RUN_IN_PROGRESS: 409,
     ErrorCode.BACKEND_MISCONFIGURED: 503,
+    ErrorCode.RESEARCH_QUEUE_UNAVAILABLE: 503,
+    ErrorCode.RESEARCH_NOT_STARTED: 503,
+    ErrorCode.RESEARCH_TIMED_OUT: 504,
+    ErrorCode.RESEARCH_STOPPED: 500,
 }
 
 
