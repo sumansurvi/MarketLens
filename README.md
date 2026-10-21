@@ -218,7 +218,7 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 - **`web`** (`apps/web`) serves the pages.
 - **`backend`** (FastAPI and its MCP servers, entry point `vercel_backend/asgi.py`) serves `/api`.
 
-`SITE_PASSWORD` locks both: the website checks it for pages and the backend for `/api`, and visitors sign in once.
+`SITE_PASSWORD` locks both: the website checks it for pages and the backend for `/api`, and visitors sign in once. The hosted site shows **real data only** (D-104): it needs live market data and a hosted model, and refuses to start in demo mode. Demo runs from before that stay in the database but are hidden in live mode.
 
 Research runs are executed by **the page's own request** (D-103): the browser starts a run, then asks the backend to run it to the end, and polls the run while it works. No queue is involved. Data lives in **Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
 

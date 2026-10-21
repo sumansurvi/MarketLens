@@ -23,9 +23,17 @@ SERVERS = ("market_data", "research_sources", "research_workspace")
 
 
 def _on_vercel(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A hosted deployment, configured for real data (the hosted site refuses anything else, D-104)."""
     monkeypatch.setenv("VERCEL", "1")
     monkeypatch.delenv("VERCEL_ENV", raising=False)
     monkeypatch.delenv("POSTGRES_URL", raising=False)
+    monkeypatch.setenv("APP_MODE", "live")
+    monkeypatch.setenv("DATA_MODE", "live")
+    monkeypatch.setenv("LLM_MODE", "openai")
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-not-real")
+    monkeypatch.setenv("OPENAI_MODEL", "test-model")
+    monkeypatch.setenv("ALPHA_VANTAGE_API_KEY", "av-test-not-real")
+    monkeypatch.setenv("SEC_USER_AGENT", "MarketLens/0.1 contact=ops@example.net")
 
 
 def _not_on_vercel(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -211,3 +219,26 @@ def test_data_status_doesnt_hang_on_servers_that_dont_answer(tmp_path, monkeypat
         response = client.get("/api/data-status")
     assert response.status_code == 200
     assert sorted(response.json()["unavailable_servers"]) == ["market_data", "research_sources"]
+
+
+def test_the_hosted_site_refuses_demo_data(monkeypatch) -> None:
+    """Demo or fixture data never reaches the hosted site, and the reason names the settings (D-104)."""
+    _on_vercel(monkeypatch)
+    monkeypatch.setenv("APP_MODE", "demo")
+    monkeypatch.setenv("DATA_MODE", "fixtures")
+    monkeypatch.setenv("LLM_MODE", "fixture")
+    monkeypatch.setenv("DATABASE_URL", POSTGRES)
+    with pytest.raises(ConfigError) as err:
+        load_settings()
+    assert any("The hosted site shows real data only" in p for p in err.value.problems)
+
+
+def test_the_hosted_model_must_be_a_hosted_one(monkeypatch) -> None:
+    """A model on a laptop (OPENAI_BASE_URL on 127.0.0.1) is not reachable from Vercel (D-104)."""
+    _on_vercel(monkeypatch)
+    monkeypatch.setenv("DATABASE_URL", POSTGRES)
+    monkeypatch.delenv("OPENAI_API_KEY")
+    monkeypatch.setenv("OPENAI_BASE_URL", "http://127.0.0.1:11434/v1")
+    with pytest.raises(ConfigError) as err:
+        load_settings()
+    assert any("needs OPENAI_API_KEY" in p for p in err.value.problems)

@@ -325,6 +325,19 @@ def validate_settings(settings: Settings) -> list[str]:
             "APP_MODE=demo requires DATA_MODE=fixtures and LLM_MODE=fixture so the demo never calls live "
             "providers. Set APP_MODE=live to enable live data or a live LLM."
         )
+    if on_vercel():
+        # The hosted site shows real data only (D-104): no demo data, and no model on a laptop.
+        if settings.app_mode != "live" or settings.data_mode != "live" or settings.llm_mode != "openai":
+            problems.append(
+                "The hosted site shows real data only: set APP_MODE=live, DATA_MODE=live and LLM_MODE=openai. "
+                "Demo data is for local development and tests."
+            )
+        has_openai_key = bool(settings.openai_api_key and settings.openai_api_key.get_secret_value().strip())
+        if settings.llm_mode == "openai" and not has_openai_key:
+            problems.append(
+                "On Vercel LLM_MODE=openai needs OPENAI_API_KEY: a model on your computer (OPENAI_BASE_URL on "
+                "127.0.0.1) can't be reached from the hosted site."
+            )
     if settings.data_mode == "live":
         if not settings.alpha_vantage_configured:
             problems.append(
