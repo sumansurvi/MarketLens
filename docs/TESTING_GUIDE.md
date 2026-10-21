@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `390 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
+| `make test` | `395 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |
@@ -294,9 +294,10 @@ The thorough versions of the security checks run automatically in `make test`: e
   - cancelling before and during a run;
   - interrupted and stale runs;
   - the Postgres requirement;
-  - the Vercel Queues SDK delivering a published run to a subscriber (its in-process queue service);
+  - the Vercel Queues SDK delivering a published run to a subscriber (its in-process queue service; queue mode, not used on Vercel since D-103);
   - a publish that hangs fails the run at once, with a reason (D-102);
   - stale queued runs and stale running runs get different reasons (D-102).
+- **Request mode, automated (D-103):** `uv run pytest tests/integration/test_research_request_mode.py` drives the hosted flow through the HTTP API: the start request only records the run as queued; the execute request runs it to completion; a second execute does nothing; an unknown run is 404; a re-run is executed the same way.
 - **The production consumer, automated (D-102):** `uv run pytest tests/integration/test_queue_consumer.py` covers:
   - the trigger the Vercel build reads from `vercel_backend.queue_consumer` (topic, three attempts, 30 s apart);
   - an early failure is raised, so Vercel Queues retries it;
@@ -358,7 +359,7 @@ The thorough versions of the security checks run automatically in `make test`: e
   - `/api/health` shows `app_env: production`, all three `mcp_servers` ready, and no warnings except the password note when no password is set;
   - the address asks for the password, then runs a research to completion;
   - `https://<address>/api/research` opened in a private window asks for the password, and `/api/health` answers without it;
-  - the `backend` logs show `MCP servers ready: 3 of 3 in … s` and `research run …: completed`;
+  - the `backend` logs show `MCP servers ready: 3 of 3 in … s` and `research run … executed in its request: completed`;
   - the cookie `ml_session` shows `Secure` in the browser's developer tools.
 
 ---

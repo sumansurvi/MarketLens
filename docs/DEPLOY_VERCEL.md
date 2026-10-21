@@ -6,20 +6,19 @@ The whole app runs in **one Vercel project** on the free **Hobby** plan, using V
 |---|---|
 | **Website** (`apps/web`, Next.js) | Service `web`, public at your address: every page. It can ask for a site password. |
 | **Backend** (FastAPI and its 3 MCP servers) | Service `backend`, public at **`/api`** on the same address, so the browser calls it directly. It asks for the same site password. Each instance starts the MCP servers inside itself. |
-| **Research runs** | **Vercel Queues.** A new research is put on a queue, and a private queue-triggered function runs it (up to 5 minutes on Hobby). |
+| **Research runs** | Run by **the page's own request** (D-103): the browser starts a run, then asks the backend to run it; that request lasts as long as the research (up to 5 minutes on Hobby), and the page follows the run by polling. No queue, and nothing else to deploy. |
 | **Database** | **Postgres**: Neon from the Vercel Marketplace (free plan), or your own Supabase project through its pooler. It replaces the local SQLite file. |
 | **Voice (Lens)** | **Off** in the hosted version: it needs an always-on worker, which Hobby doesn't offer. Dictation still works, because it runs in the visitor's browser. |
 
 ```
               ┌─ /api/* ──▶ backend (FastAPI + 3 MCP servers) ──▶ Postgres (Neon or Supabase)
-Browser ─https┤               site password │ publishes each run       ▲
-              │                             ▼                          │
-              │                       Vercel Queues ──▶ research consumer (private function)
+Browser ─https┤               site password │ start (queued), then execute (runs it)
+              │                             │ the page polls the run's row meanwhile
               └─ everything else ──▶ web (Next.js pages), site password
 ```
 
 **Before you start:**
-- Services, Queues (Python SDK) and the Python backend are **beta** Vercel features. Hobby includes the first 1,000,000 queue operations a month, and one research uses only a handful.
+- Services and the Python backend are **beta** Vercel features.
 - The first deploy (2026-10-20) found that environment variables copied from `.env.example` stopped the backend's three data services. Since D-101 the backend applies its Vercel settings itself, and a setup problem shows up on the site as a message that names the fix. Both were rehearsed locally with a read-only copy of the repository, Postgres and the Queues SDK's local server (see [PROJECT_STATUS](../PROJECT_STATUS.md) D-101). [If something goes wrong](#if-something-goes-wrong) covers the likely problems.
 
 ## 1. Create the Vercel project
@@ -61,7 +60,7 @@ Add these under **Settings › Environment Variables**, then redeploy. **Don't i
 | `RUN_TIMEOUT_SECONDS` | `120` (default) to `280` | a research must finish within the 300-second function limit on Hobby |
 
 What you don't need to set:
-- `RUN_EXECUTION=queue`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are always used on Vercel: the backend enforces them (D-101). If the project has other values for them, for example copied from `.env.example`, they are ignored, and `/api/health` lists them under `warnings` so you can delete them.
+- `RUN_EXECUTION=request`, `APP_ENV=production` (the `Secure` session cookie) and `MCP_LOG_DIR=-` (server logs in Vercel's logs) are always used on Vercel: the backend enforces them (D-101). If the project has other values for them, for example copied from `.env.example`, they are ignored, and `/api/health` lists them under `warnings` so you can delete them.
 - `BACKEND_URL` comes from the binding.
 - **Don't set `PROXY_SHARED_SECRET`** in this setup. Browsers call `/api` directly and can't send it, so the backend refuses to start with it on Vercel and says why. It only belongs in the backend-on-its-own-host setup (bottom of this page).
 
@@ -73,7 +72,7 @@ Environment variables belong to the whole project, so both services can read the
 2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set.
 3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes within a minute in demo mode.
 4. Press the search icon and search for `apple`: the run appears.
-5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run …: completed`.
+5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run … executed in its request: completed`.
 
 ## Live data (optional)
 
@@ -94,9 +93,11 @@ The local Ollama setup runs only on your own computer, so the hosted backend nee
 
 The voice assistant needs a worker that stays connected to LiveKit all the time. On Vercel that means a **Daemon**, which needs the Pro plan to run all month: Hobby includes 10 vCPU-hours a month, about 10 hours of one worker. The alternative is LiveKit's own agent hosting. With voice off, the sound-wave button is greyed out with the label "Voice not configured", and everything else, including dictation, works. `Dockerfile.voice` is kept for later.
 
+**If voice is turned on later:** a research started by voice is only recorded as queued, and nothing executes it in the `request` mode. The voice worker would have to call `POST /api/research/{id}/execute` for the run it starts. That is part of the voice work in [fix.md](../fix.md) §7.
+
 ## Updating
 
-Push to the production branch and Vercel redeploys both services. Preview deployments of other branches work too: each preview has its own queue partition. Previews share the production database unless you enable Neon's branch-per-preview option in the integration.
+Push to the production branch and Vercel redeploys both services. Preview deployments of other branches work too. Previews share the production database unless you enable Neon's branch-per-preview option in the integration.
 
 ## If something goes wrong
 
@@ -109,11 +110,10 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | "The … MCP server is unavailable" | `/api/health` shows each server's `last_error`. Send it with the `backend` logs. A log folder the function can't write no longer stops the servers (D-101). |
 | `/api/health` warns "… is set in the project's environment variables but ignored on Vercel" | Delete that variable in Settings › Environment Variables. It does no harm, but it doesn't belong there. |
 | The start button spins, then the bar says "The request took too long" | The backend didn't answer within 45 s. Check the `backend` logs for `could not publish research run` (the publish timed out or failed; the log names the error). The run page shows the outcome too, so check the history before starting the same research again. |
-| A run says "The run couldn't be started" (`RESEARCH_QUEUE_UNAVAILABLE`) | The backend couldn't publish to Vercel Queues within 15 s. The `backend` logs show `could not publish research run … ` with the cause (for example an authentication error). Press Re-run once that is fixed. |
-| A run says "The research service didn't pick the run up" (`RESEARCH_NOT_STARTED`) | The message was published, but no consumer started it before the time limit. Check the consumer's logs, next row. |
-| A run says "The research service stopped unexpectedly" (`RESEARCH_STOPPED`) | The consumer failed on its last attempt; the consumer's logs have the traceback (`research run … delivery 3 of 3 failed`). |
-| Consumer logs: no `research consumer loaded` line and no `research run … delivery` lines | Vercel didn't build the consumer. Check the build log for the subscriber, that `pyproject.toml` still has `[[tool.vercel.subscribers]]` with `entrypoint = "vercel_backend.queue_consumer"`, and that the deployment's Functions list includes it. A deployment only runs the consumer that it built. |
-| A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
+| A run stays **Queued** on its page | The page starts a queued run when it opens it. Reload the page. If it stays queued, the execute request didn't reach the backend: check the `backend` logs for `POST /api/research/…/execute`. |
+| A run's page says "The research service stopped unexpectedly" (`RESEARCH_STOPPED`) | The research failed inside its request. The `backend` logs have the traceback (`unhandled error`). |
+| A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes, or the function's 300 s limit). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
+| Older runs show "didn't pick the run up" or "couldn't be started" | Runs from the queue setup (D-102) and before D-103. Press Re-run. |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
 | Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
@@ -121,7 +121,6 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 
 Protected:
 - **`SITE_PASSWORD`** keeps strangers out of the pages (checked by the website) and the API at `/api` (checked by the backend). Only `/api/health` answers without it; it shows modes and capabilities, never keys.
-- The queue consumer can only be started by Vercel Queues.
 - The session cookie is HTTP-only, `SameSite=Lax` and `Secure`.
 - API keys are server-side environment variables, never sent to browsers.
 
@@ -139,10 +138,10 @@ Share the password only with people you trust. If you want a site anyone can ope
   - service `backend`: root `./`, FastAPI, entry point `vercel_backend.asgi:app`;
   - two public rewrites, in this order: `/api/(.*)` → `backend` (the service sees the full `/api/…` path, which matches its routes), then `/(.*)` → `web`.
 - **`vercel_backend/`:**
-  - `asgi.py`: the app;
-  - `queue_consumer.py`: the `@subscribe` research consumer, declared under `[[tool.vercel.subscribers]]` in `pyproject.toml`;
-  - `__init__.py`: import paths, and `VERCEL=1` when the platform hides its system variables.
-- **Vercel settings** (`marketlens_core.config`, D-101): on Vercel (`VERCEL` set, `VERCEL_ENV` not `development`), `load_settings` enforces `VERCEL_PROFILE` (`APP_ENV=production`, `RUN_EXECUTION=queue`, `MCP_LOG_DIR=-`), skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset. It works whichever module loads the app. Empty variables count as unset everywhere.
+  - `asgi.py`: the app (`maxDuration` 300 in `vercel.json`, Hobby's limit);
+  - `__init__.py`: import paths, and `VERCEL=1` when the platform hides its system variables;
+  - `queue_consumer.py`: the research consumer for the old queue mode (D-98). It isn't deployed on Vercel since D-103, and `scripts/run_queue_consumer.py` rehearses it locally.
+- **Vercel settings** (`marketlens_core.config`, D-101): on Vercel (`VERCEL` set, `VERCEL_ENV` not `development`), `load_settings` enforces `VERCEL_PROFILE` (`APP_ENV=production`, `RUN_EXECUTION=request`, `MCP_LOG_DIR=-`), skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset. It works whichever module loads the app. Empty variables count as unset everywhere.
 - **Setup problems answer instead of crashing** (D-101):
   - An invalid configuration makes `hosted_app_from_settings` serve a stand-in app. Every `/api` request gets `503 BACKEND_MISCONFIGURED` with the problems, and the site's red bar shows the first one.
   - A database the backend can't open at startup gives the same 503, with a known fix (the Supabase pooler) when the URL shows one.
@@ -150,12 +149,12 @@ Share the password only with people you trust. If you want a site anyone can ope
 - **MCP servers:** a log file that can't be written falls back to stderr, and a supervisor that dies records why in `last_error`.
 - **`apps/web/app/api/[...path]/route.ts`** forwards `/api/*` to `BACKEND_URL` at request time. On Vercel `/api` never reaches the website, so this matters for local runs and the backend-on-its-own-host setup. The binding stays as a fallback for that route (a build-time rewrite couldn't use it).
 - **Site password on the backend** (`app/api/middleware.py`, D-99): with `SITE_PASSWORD` set and no `PROXY_SHARED_SECRET`, every `/api` request except `/api/health` must carry it as HTTP Basic credentials. With a secret, the backend trusts the website, which checked the password, and ignores direct calls.
-- **Research execution:** `RUN_EXECUTION=queue`.
-  - `QueueRunManager` publishes `{run_id}` before answering, with a 15 s limit. A publish that fails or times out marks the run `RESEARCH_QUEUE_UNAVAILABLE` at once (D-102).
-  - `vercel_backend/queue_consumer.py` logs the consumer's load and each delivery (`research run … delivery N of 3`). A failed delivery is retried by Vercel Queues (30 s apart, three in all). On the last one the run is marked `RESEARCH_STOPPED` with a reason.
-  - `run_consumer.run_queued_research` claims the run atomically, runs it, and watches the database for cancellation.
-  - Runs still queued past their limit are marked `RESEARCH_NOT_STARTED`; runs still running past theirs are marked `RESEARCH_TIMED_OUT`. Both are checked whenever runs are read.
-  - The web app bounds every API call (30 s, 45 s for starting a run), so the page never waits forever.
+- **Research execution:** `RUN_EXECUTION=request` (D-103).
+  - `POST /api/research` records the run as queued and answers at once. The page then opens the run, and the run view calls `POST /api/research/{id}/execute`. That request runs the research to the end (`run_consumer.run_queued_research`: an atomic claim, the workflow, and a watch for cancellation). The page polls the run meanwhile.
+  - A second execute request for a run does nothing (the claim is atomic), so a reload or a second tab is safe. A run that is still queued when its page opens is started by that page.
+  - A run that never finishes is marked `RESEARCH_TIMED_OUT` by the stale-run sweep, which runs whenever runs are read (`RUN_TIMEOUT_SECONDS` plus two minutes). A run that never started gets `RESEARCH_NOT_STARTED`.
+  - Needs Postgres on Vercel, shared by the instances. The web app bounds its calls (30 s, and 310 s for execute).
+  - Voice-started research isn't executed in this mode, because voice is off on Vercel (see the voice section).
 - **Postgres:** `migrations_postgres/` mirrors `migrations/` with the same version numbers. Writes take one advisory lock, so they are serialized as in SQLite.
 - **Local rehearsal:** see [TESTING_GUIDE](TESTING_GUIDE.md) §7.
 

@@ -100,7 +100,7 @@ Everything is configured with environment variables or a git-ignored `.env` (`cp
 | `LLM_MODE` | `fixture` (deterministic, offline) · `openai` | `fixture` |
 | `VOICE_MODE` | `disabled` · `livekit` | `disabled` |
 | `DATABASE_URL` | `sqlite:///…` (local file) · `postgresql://…` (hosted, D-98) | `sqlite:///./data/marketlens.db` |
-| `RUN_EXECUTION` | `inline` (background task in the backend) · `queue` (Vercel Queues; needs Postgres; always used on Vercel, D-101) | `inline` |
+| `RUN_EXECUTION` | `inline` (background task in the backend) · `request` (the page's execute request runs each run; needs Postgres; always used on Vercel, D-103) · `queue` (Vercel Queues; not used on Vercel) | `inline` |
 
 **Live market data** (`APP_MODE=live`, `DATA_MODE=live`):
 - `ALPHA_VANTAGE_API_KEY`: a free key allows 25 requests a day and about one per second. A research run needs at most three (quote, daily prices, news); after the first refusal of news on a free key, later runs need two until the backend restarts, and more when the provider's fundamentals are used as a fallback. Results are cached, so re-runs need fewer.
@@ -220,9 +220,9 @@ Other known limitations are listed in [`PROJECT_STATUS.md` › Known defects / l
 
 `SITE_PASSWORD` locks both: the website checks it for pages and the backend for `/api`, and visitors sign in once.
 
-Research runs go through **Vercel Queues**: the backend publishes each run, and a private queue-triggered function (`vercel_backend/queue_consumer.py`) runs it. Data lives in **Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
+Research runs are executed by **the page's own request** (D-103): the browser starts a run, then asks the backend to run it to the end, and polls the run while it works. No queue is involved. Data lives in **Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler); locally it stays SQLite. Voice is off in the hosted version, because it needs an always-on worker.
 
-On Vercel the backend applies its hosted settings itself (production, research through the queue, MCP server logs on stderr), whatever the project's variables say. A setup problem, such as a missing database, shows on the site as a red bar that names the fix, instead of a generic server error (D-101). Don't import `.env` or `.env.example` into the project. A research that can't start or finish says why on its page, with Re-run (D-102).
+On Vercel the backend applies its hosted settings itself (production, research executed by its request, MCP server logs on stderr), whatever the project's variables say. A setup problem, such as a missing database, shows on the site as a red bar that names the fix, instead of a generic server error (D-101). Don't import `.env` or `.env.example` into the project. A research that can't start or finish says why on its page, with Re-run (D-102).
 
 When you import the repository, set **Application Preset** to **Services**, leave Root Directory as `./`, ignore the "Import single project" buttons and click **Deploy**. Otherwise Vercel ignores the services and deploys one app (D-100).
 

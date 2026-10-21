@@ -218,7 +218,7 @@ You can't click these directly, but you can see their effects.
 | Real-setup smoke tests | [`TESTING_GUIDE.md`](TESTING_GUIDE.md) §2 |
 | Demo data | `uv run python scripts/seed_demo.py` (demo mode only) |
 | Docker fallback | `make start MODE=docker` (needs Docker Desktop running; not yet run on this machine) |
-| Deploy to Vercel | [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md): one Vercel project on the free Hobby plan. Services `web` (pages) and `backend` (`/api`) share one address and one `SITE_PASSWORD`; research runs through Vercel Queues; Postgres (Neon from the Marketplace, or Supabase through its pooler); voice off when hosted (D-98, D-99). A setup problem shows on the site as a red bar naming the fix (D-101). The earlier backend-on-Render setup is the documented alternative |
+| Deploy to Vercel | [`DEPLOY_VERCEL.md`](DEPLOY_VERCEL.md): one Vercel project on the free Hobby plan. Services `web` (pages) and `backend` (`/api`) share one address and one `SITE_PASSWORD`; research runs are executed by the page's own request (D-103); Postgres (Neon from the Marketplace, or Supabase through its pooler); voice off when hosted (D-98, D-99). A setup problem shows on the site as a red bar naming the fix (D-101). The earlier backend-on-Render setup is the documented alternative |
 | Configuration | `.env` (every setting is explained in `.env.example`), README › Configuration |
 
 ---

@@ -53,9 +53,7 @@ flowchart TD
   AVN --> T
   YN --> T
   B --> DB[(SQLite locally<br/>Postgres on Vercel)]
-  B -.->|queue mode, Vercel| Q[Vercel Queues]
-  Q -.-> RC[Research consumer<br/>queue-triggered function]
-  RC --> RW
+  B -->|hosted: POST …/execute runs the run in that request| RW
   WS --> DB
   MD -.->|provider cache, live mode| DB
   RS -.->|provider cache, live mode| DB
@@ -66,17 +64,19 @@ flowchart TD
   - **Routing (D-99):** `/api/(.*)` → **`backend`** (FastAPI, entry point `vercel_backend.asgi:app`), then `/(.*)` → **`web`** (`apps/web`). Both are public on one address, so the session cookie stays first-party. `web` keeps a binding to `backend` (`BACKEND_URL`) for its `/api` forwarding route, which on Vercel isn't reached.
   - **Site password on both (D-99):** `proxy.ts` checks `SITE_PASSWORD` for pages, and the backend middleware checks it for `/api` (HTTP Basic; browsers resend the credentials they entered, so visitors sign in once). `PROXY_SHARED_SECRET` is refused on Vercel, because browsers can't send it.
   - **`backend`:** each instance runs migrations under a Postgres advisory lock and starts the three MCP servers as child processes in its lifespan; on Vercel they inherit the backend's import path, and their logs go to stderr.
-  - **Vercel settings are enforced, not defaulted (D-101):** on Vercel, `load_settings` always uses `APP_ENV=production`, `RUN_EXECUTION=queue` and `MCP_LOG_DIR=-`, skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset, whichever module loads the app. Project variables that say otherwise (for example copied from `.env.example`) are ignored and listed in `/api/health` `warnings`.
+  - **Vercel settings are enforced, not defaulted (D-101, D-103):** on Vercel, `load_settings` always uses `APP_ENV=production`, `RUN_EXECUTION=request` and `MCP_LOG_DIR=-`, skips `.env`, and takes `POSTGRES_URL` when `DATABASE_URL` is unset, whichever module loads the app. Project variables that say otherwise (for example copied from `.env.example`) are ignored and listed in `/api/health` `warnings`.
   - **Setup problems answer instead of crashing (D-101):** an invalid configuration, or a database the backend can't open at startup, gives a 503 `BACKEND_MISCONFIGURED` on every `/api` request. The message names the fix, and the site's red bar shows it. Locally both still stop startup.
-  - A Vercel Function can't keep working after it answers, so research runs execute through **Vercel Queues** (`RUN_EXECUTION=queue`):
-    - `QueueRunManager` publishes `{run_id}` before answering.
-    - The private subscriber `vercel_backend.queue_consumer` runs it with `run_consumer.run_queued_research`. That claims the run atomically (at-least-once delivery), executes the same `ResearchWorkflowService`, and watches the run row for a cancel request.
-    - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`). Each gets its own reason: `RESEARCH_NOT_STARTED` (never picked up) or `RESEARCH_TIMED_OUT` (started, never finished). 
+  - **Research runs are executed by the page's own request (`RUN_EXECUTION=request`, D-103).** A Vercel Function can't keep working after it has answered, so the run can't be started and left to finish. Instead:
+    - `POST /api/research` records the run as `queued` and answers at once.
+    - The page opens the run; the run view sees it queued and calls `POST /api/research/{id}/execute`. That request runs `run_consumer.run_queued_research` to the end: an atomic claim, the same `ResearchWorkflowService`, and a watch on the run row for a cancel request (which may come from another instance).
+    - While it runs, the page polls the run's row, as it always has. A second execute request for the same run does nothing, because the claim is atomic.
+    - Runs still queued or running past `RUN_TIMEOUT_SECONDS` + 120 s are marked failed whenever runs are read (`sweep_stale`). Each gets its own reason: `RESEARCH_NOT_STARTED` (never started) or `RESEARCH_TIMED_OUT` (started, never finished). The Hobby limit is 300 s per request, so `RUN_TIMEOUT_SECONDS` stays at 280 or less there.
+    - Queues (D-98) remain as `RUN_EXECUTION=queue` for local rehearsal. Vercel doesn't deploy a consumer for them since D-103.
     - **Failures say why (D-102).** Every run that stops without a brief carries a code the page explains, with Re-run:
-      - `RESEARCH_QUEUE_UNAVAILABLE`: the publish failed or took longer than 15 s (`PUBLISH_TIMEOUT_SECONDS`), so the start request answers at once instead of hanging.
+      - `RESEARCH_QUEUE_UNAVAILABLE`: queue mode only: the publish failed or took longer than 15 s (`PUBLISH_TIMEOUT_SECONDS`).
       - `RESEARCH_NOT_STARTED` and `RESEARCH_TIMED_OUT`: the sweep above.
-      - `RESEARCH_STOPPED`: the consumer failed on its last delivery (three in all, 30 s apart). The failure is recorded at once, and the consumer's logs hold the traceback.
-    - The consumer logs its load and every delivery (`research run … delivery N of 3`), so the runtime logs show whether Vercel delivers runs at all.
+      - `RESEARCH_STOPPED`: the run was interrupted, or the research failed inside its request; the failure is recorded, and the backend logs hold the traceback.
+    - The execute request logs `research run … executed in its request: completed` (or `skipped` for a repeat), so the runtime logs show each run's execution.
     - The web app bounds its calls: 30 s by default and 45 s for starting a run. A call that times out says so and returns the button to ↑.
   - **State is in Postgres** (Neon from the Vercel Marketplace, or Supabase through its Transaction pooler), shared by every instance and the MCP servers.
   - **Voice is off** in the hosted version: it needs an always-on worker (a Pro-plan Daemon).
@@ -121,8 +121,8 @@ Dockerfile.backend                production backend image (FastAPI plus the thr
 Dockerfile.voice                  optional voice worker image (LiveKit agent, no inbound port)
 render.yaml                       Render Blueprint: the backend from Dockerfile.backend with a disk, demo mode, a generated proxy secret (D-94)
 vercel.json                       Vercel Services: web (pages) and backend (/api), one address (D-98, D-99)
-vercel_backend/                   the backend's Vercel entry points: asgi.py (the app) and queue_consumer.py (research runs)
-scripts/run_queue_consumer.py     local stand-in for Vercel Queues delivery (queue-mode rehearsal)
+vercel_backend/                   the backend's Vercel entry points: asgi.py (the app); queue_consumer.py is for the queue mode only
+scripts/run_queue_consumer.py     local stand-in for Vercel Queues delivery (queue-mode rehearsal only)
 apps/web/proxy.ts                 optional site password, and the backend shared secret added to /api requests (D-94)
 ```
 
@@ -145,7 +145,7 @@ Python is one uv workspace: a root `pyproject.toml` and one lockfile covering ev
 | Separate pages: research home, run page, saved briefs, watchlist, settings | One chat-style screen: history rail on the left, the run in the middle, quick starts on the right, and a one-line research bar (ticker dropdown, dictation, voice session) docked at the bottom. Run details and comparisons open as dialogs. Saved briefs, the watchlist and data status have no UI (API only); `/research/[runId]` still opens a run | D-78, D-81, D-82, D-83 |
 | OpenAI as the only real model | Any OpenAI-compatible endpoint through `OPENAI_BASE_URL`, so a free local model (Ollama) works without a key | D-76 |
 | Alpha Vantage requests limited per process (D-40) | Pacing shared by every process through SQLite, one upstream call for identical concurrent requests, one retry after a per-second rejection, and the daily quota reported as such | D-77 |
-| Deployment notes only; the app runs locally | One Vercel project (D-98, D-99): Services `web` (pages) and `backend` (`/api`), both behind `SITE_PASSWORD`; research runs on Vercel Queues, Postgres from the Marketplace, voice off. Before that (D-94): Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94, D-98, D-99 |
+| Deployment notes only; the app runs locally | One Vercel project (D-98, D-99): Services `web` (pages) and `backend` (`/api`), both behind `SITE_PASSWORD`; research runs are executed by the page's own request (D-103), Postgres from the Marketplace, voice off. Before that (D-94): Vercel for the web app; a container host for the backend (Render Blueprint, `Dockerfile.backend`, disk at `/data`) and the voice worker (`Dockerfile.voice`); an optional site password and a backend shared secret added by `apps/web/proxy.ts`; `Secure` cookie in production | D-94, D-98, D-99 |
 
 ## 3. Components and responsibilities
 
@@ -232,8 +232,8 @@ services/backend/app/
     schemas.py, deps.py   HTTP response contracts (the source of the web types); FastAPI dependencies
   services/
     research_workflow.py  ResearchWorkflowService: the one workflow shared by text and voice
-    run_manager.py        starts runs: inline background tasks (local) or Vercel Queues (hosted); cancellation, stale runs
-    run_consumer.py       runs one queued run: atomic claim, execution, cancel watching (D-98)
+    run_manager.py        starts runs: inline background tasks (local), the page's execute request (hosted, D-103) or Vercel Queues (queue mode); cancellation, stale runs
+    run_consumer.py       runs one queued run: atomic claim, execution, cancel watching (D-98, used by D-103's execute request)
     evidence_collector.py read-only MCP calls per category → evidence ledger and category status
     derived_metrics.py    deterministic calculations on retrieved evidence
     consistency.py        deterministic contradiction detection
@@ -480,7 +480,7 @@ No MCP server exposes filesystem, shell, SQL, URL-fetch or trading tools. The ag
   - `make start` seeds the demo data unless `.env` selects live data or a real model.
   - `make start` and `make run` add `--voice` when `.env` has `VOICE_MODE=livekit`, and `make status` then reports the worker (D-80). Docker runs without the worker.
 - **Deployment (D-98):**
-  - One Vercel project from `vercel.json`: services `web` (pages) and `backend` (`/api`), Vercel Queues for research runs, Postgres from the Marketplace (D-98, D-99). The steps are in `docs/DEPLOY_VERCEL.md`.
+  - One Vercel project from `vercel.json`: services `web` (pages) and `backend` (`/api`), research runs executed by the page's execute request (D-103), Postgres from the Marketplace (D-98, D-99). The steps are in `docs/DEPLOY_VERCEL.md`.
   - The project's Framework Preset must be **Services**, with Root Directory `./`. With any other preset, Vercel ignores the `services` key and builds one app (D-100).
   - The earlier split (D-94: the web app on Vercel, the backend from `render.yaml` / `Dockerfile.backend`) remains an alternative.
   - The voice worker image (`Dockerfile.voice`) is kept for a later always-on host.
@@ -826,7 +826,8 @@ Status on 2026-10-10, with later changes noted (last reviewed 2026-10-12). Evide
 - Vercel system environment variables (`VERCEL`, `VERCEL_ENV`: build and runtime, when the project exposes them; D-101): https://vercel.com/docs/environment-variables/system-environment-variables
 - Supabase connection strings (direct connection IPv6-only without the IPv4 add-on; the shared Transaction pooler, port 6543, is IPv4, free and meant for serverless, without prepared statements; D-101): https://supabase.com/docs/guides/database/connecting-to-postgres
 - Vercel Services guide (Framework Preset **Services** required, D-100): https://vercel.com/kb/guide/vercel-services
-- Vercel Queues and its Python SDK (push subscribers, `[[tool.vercel.subscribers]]`): https://vercel.com/docs/queues/concepts · https://vercel.com/docs/queues/python-sdk
+- Vercel Queues and its Python SDK (queue mode only since D-103): https://vercel.com/docs/queues/concepts · https://vercel.com/docs/queues/python-sdk
+- Vercel function duration (300 s on Hobby, set for the backend in `vercel.json`, D-103): https://vercel.com/docs/functions/configuring-functions/duration
 - FastAPI on Vercel (entry point, lifespan): https://vercel.com/docs/frameworks/backend/fastapi
 - Vercel Functions limits (300 s on Hobby) and Daemons limits (why voice is off on Hobby): https://vercel.com/docs/functions/limitations · https://vercel.com/docs/daemons/limits
 - Render Blueprint specification (`render.yaml`): https://render.com/docs/blueprint-spec

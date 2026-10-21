@@ -1,12 +1,17 @@
 """Starts research runs and tracks them so they can be cancelled and shut down cleanly.
 
-Two ways to execute a run (``RUN_EXECUTION``, D-98):
+Three ways to execute a run (``RUN_EXECUTION``):
 
 - ``RunManager`` (inline, local): an asyncio task in the backend process.
-- ``QueueRunManager`` (queue, Vercel): the backend publishes the run to Vercel Queues and a
-  queue-triggered function runs it (``app.services.run_consumer``). A Vercel Function can't keep
-  working after it has answered, and several instances share nothing but the Postgres database,
-  so the database holds the run's state and the consumer watches it for cancellation.
+- ``RequestRunManager`` (request, Vercel, D-103): the start request only records the run as
+  queued; the browser then calls ``execute``, which runs it inside that request. The page follows
+  the run's row by polling. Nothing else has to be deployed or delivered.
+- ``QueueRunManager`` (queue, D-98): the backend publishes the run to Vercel Queues and a
+  queue-triggered function runs it (``app.services.run_consumer``). Not used on Vercel since D-103.
+
+A Vercel Function can't keep working after it has answered, and several instances share nothing but
+the Postgres database, so the database holds each run's state and whatever executes it watches it
+for cancellation.
 """
 
 from __future__ import annotations
@@ -47,6 +52,9 @@ class RunManager:
 
     def is_active(self, run_id: str) -> bool:
         return run_id in self._tasks
+
+    async def execute(self, run_id: str) -> None:
+        """Inline runs are already executing (started with the run); nothing to do here."""
 
     def sweep_stale(self) -> None:
         """Inline runs live in this process; a restart marks them interrupted instead."""
@@ -118,6 +126,9 @@ class QueueRunManager:
         run = self.runs.get_run(run_id)
         return run is not None and run.status in (RunStatus.QUEUED, RunStatus.RUNNING)
 
+    async def execute(self, run_id: str) -> None:
+        """The queue's consumer executes the run; the request has nothing to do."""
+
     def sweep_stale(self) -> None:
         cutoff = utc_now() - dt.timedelta(seconds=self.settings.run_timeout_seconds + STALE_MARGIN_SECONDS)
         stopped = self.runs.fail_stale_runs(cutoff)
@@ -152,3 +163,26 @@ class QueueRunManager:
 
     async def shutdown(self) -> None:
         """Runs belong to the queue, not to this process."""
+
+
+class RequestRunManager(QueueRunManager):
+    """Hosted without a queue (D-103): the browser's execute request runs each queued run.
+
+    The start request records the run as queued and returns at once. The page then calls
+    ``POST /api/research/{id}/execute``, which runs it in that request (up to the function's maximum
+    duration; RUN_TIMEOUT_SECONDS stays below it) while the page polls the run's row. The run's
+    claim is atomic, so a second execute request for the same run does nothing.
+    """
+
+    def __init__(self, settings: Settings, runs: RunRepository, workflow: ResearchWorkflowService) -> None:
+        super().__init__(settings, runs)
+        self.workflow = workflow
+
+    async def start(self, run_id: str) -> None:
+        """Nothing to publish: the page's execute request runs it."""
+
+    async def execute(self, run_id: str) -> None:
+        from app.services.run_consumer import run_queued_research
+
+        outcome = await run_queued_research(self.workflow, self.runs, run_id)
+        logger.info("research run %s executed in its request: %s", run_id, outcome)

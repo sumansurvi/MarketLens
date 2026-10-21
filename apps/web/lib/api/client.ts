@@ -109,3 +109,14 @@ export async function api<T>(
   }
   return body as T;
 }
+
+/**
+ * A run executes inside its execute request (D-103), which lasts as long as the research: the server
+ * ends it at the function's 300 s limit, so the page waits a little longer than that.
+ */
+const EXECUTE_TIMEOUT_MS = 310_000;
+
+/** Runs a queued research in this request. The page follows the run by polling, not by this answer. */
+export function executeRun(runId: string): Promise<unknown> {
+  return api(`/api/research/${encodeURIComponent(runId)}/execute`, { method: "POST", timeoutMs: EXECUTE_TIMEOUT_MS });
+}

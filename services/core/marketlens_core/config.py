@@ -48,7 +48,7 @@ def on_vercel() -> bool:
 # cookie is Secure. Project environment variables can't change them: values copied from
 # .env.example (APP_ENV=development, RUN_EXECUTION=inline, an empty MCP_LOG_DIR) once stopped
 # every MCP server on the live site.
-VERCEL_PROFILE: dict[str, str] = {"app_env": "production", "run_execution": "queue", "mcp_log_dir": "-"}
+VERCEL_PROFILE: dict[str, str] = {"app_env": "production", "run_execution": "request", "mcp_log_dir": "-"}
 
 
 class ConfigError(Exception):
@@ -90,10 +90,14 @@ class Settings(BaseSettings):
     # One Vercel project with /api routed straight to the backend (D-99): the backend asks for the
     # same site password as the web app (HTTP Basic, any user name). Unset locally.
     site_password: SecretStr | None = None
-    # How research runs execute (D-98). inline: a background task in the backend process (local).
-    # queue: the backend publishes each run to Vercel Queues and a queue-triggered function runs
-    # it, because a Vercel Function can't keep working after it has answered (needs Postgres).
-    run_execution: Literal["inline", "queue"] = "inline"
+    # How research runs execute. inline: a background task in the backend process (local).
+    # request: the browser starts each run with a request of its own (POST /api/research/{id}/execute),
+    # which runs it inside that request; the page follows the run by polling (D-103). This is what
+    # Vercel uses: a Function may run up to its maximum duration, and nothing needs deploying besides
+    # the web and backend services (needs Postgres, shared by the instances). queue: the backend
+    # publishes each run to Vercel Queues and a queue-triggered function runs it (D-98); kept for
+    # local rehearsal, not used on Vercel since D-103.
+    run_execution: Literal["inline", "request", "queue"] = "inline"
     research_queue_topic: str = Field(default="marketlens-research-runs", pattern=r"^[a-z0-9][a-z0-9-]{0,62}$")
     # Where the MCP servers' logs go. Default: data/runtime/logs. `-`: stderr (always on Vercel,
     # where only /tmp is writable).
@@ -360,19 +364,17 @@ def validate_settings(settings: Settings) -> list[str]:
             "Or set VOICE_MODE=disabled (text research keeps working)."
         )
     problems.extend(_database_problems(settings))
-    if settings.run_execution == "queue" and not settings.database_is_postgres:
-        if on_vercel():
-            problems.append(
-                "DATABASE_URL must be a Postgres URL on Vercel: research runs through Vercel Queues on other "
-                "instances, and the deployment's files are read-only. Add Neon from the Vercel Marketplace (it "
-                "sets DATABASE_URL), or set DATABASE_URL to your Supabase project's Transaction pooler "
-                "connection string (port 6543)."
-            )
-        else:
-            problems.append(
-                "RUN_EXECUTION=queue requires a Postgres DATABASE_URL: queue-triggered functions run on other "
-                "instances and can't share a local SQLite file."
-            )
+    if on_vercel() and not settings.database_is_postgres:
+        problems.append(
+            "DATABASE_URL must be a Postgres URL on Vercel: each request runs on any instance and the "
+            "deployment's files are read-only. Add Neon from the Vercel Marketplace (it sets DATABASE_URL), or "
+            "set DATABASE_URL to your Supabase project's Transaction pooler connection string (port 6543)."
+        )
+    elif settings.run_execution == "queue" and not settings.database_is_postgres:
+        problems.append(
+            "RUN_EXECUTION=queue requires a Postgres DATABASE_URL: queue-triggered functions run on other "
+            "instances and can't share a local SQLite file."
+        )
     if settings.is_fixture_data and not (settings.fixture_root / "manifest.json").exists():
         problems.append(
             f"Fixture dataset not found at {settings.fixture_root}. Set FIXTURE_DIR or restore data/fixtures/v1."
