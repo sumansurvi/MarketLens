@@ -68,26 +68,30 @@ Environment variables belong to the whole project, so both services can read the
 
 ## 4. Check that it works
 
-1. Open your address. The browser asks for the password if you set one. MarketLens loads with the yellow **DEMO FIXTURES** label.
+1. Open your address. The browser asks for the password if you set one. MarketLens loads with the green **LIVE DATA** label. A **DEMO FIXTURES** label on the hosted site means the real-data settings below are missing (the site would refuse to start in demo mode).
 2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set.
-3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes within a minute in demo mode.
+3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes with real market data (this can take a few minutes with a hosted model).
 4. Press the search icon and search for `apple`: the run appears.
 5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run … executed in its request: completed`.
 
-## Live data (optional)
+## Real data (required)
 
-Add these to the project's environment variables, then redeploy:
+The hosted site shows real data only (D-104). Without these settings it refuses to start and its red bar names what is missing. Add them under **Settings › Environment Variables** (Production, and Preview if you use it), then redeploy:
 
 | Variable | Value |
 |---|---|
-| `APP_MODE`, `DATA_MODE` | `live` |
-| `ALPHA_VANTAGE_API_KEY` | your key (the free key allows 25 requests a day, shared by everyone using the site) |
-| `SEC_USER_AGENT` | `MarketLens/0.1 contact=you@yourdomain.com` (SEC requires a real contact) |
-| `LLM_MODE` | `openai` |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` | an OpenAI key and a model that supports structured outputs |
-| `RUN_TIMEOUT_SECONDS` | `240` (model calls take longer than the demo) |
+| `APP_MODE`, `DATA_MODE`, `LLM_MODE` | `live`, `live`, `openai` |
+| `ALPHA_VANTAGE_API_KEY` | your key. The free key allows 25 requests a day, shared by everyone using the site |
+| `SEC_USER_AGENT` | `MarketLens/0.1 contact=<a real contact address>`. SEC requires one |
+| `OPENAI_API_KEY` | your OpenAI key |
+| `OPENAI_MODEL` | a hosted model that supports structured outputs |
+| `RUN_TIMEOUT_SECONDS` | `240` (the limit is 280 on Hobby) |
 
-The local Ollama setup runs only on your own computer, so the hosted backend needs a hosted model. Another OpenAI-compatible service works only if it supports the Responses API with structured outputs. Outbound HTTPS to Alpha Vantage, SEC EDGAR and Yahoo Finance is allowed by default. Every other setting is explained in [`.env.example`](../.env.example).
+Don't copy `OPENAI_BASE_URL` from your `.env`: it points at a model on your computer, which Vercel can't reach. `NEWS_FALLBACK` (Yahoo Finance headlines, no key) is on by default.
+
+Runs made from demo data before this setting (they are in the database) are hidden from the hosted site and are not deleted. Live mode never shows them, in the history, the search, or a direct link (D-104).
+
+Outbound HTTPS to Alpha Vantage, SEC EDGAR and Yahoo Finance is allowed by default. Every other setting is explained in [`.env.example`](../.env.example).
 
 ## Voice (not in the hosted version)
 
@@ -128,7 +132,7 @@ Not protected:
 - MarketLens is still **one shared workspace**. Everyone with the password sees the same research history and uses the same API key quotas.
 - There are no user accounts and no rate limits on research.
 
-Share the password only with people you trust. If you want a site anyone can open without a password, keep it in demo mode (synthetic data, no keys).
+Share the password only with people you trust. The hosted site can't run in demo mode (D-104), so every visitor sees real data and every research uses your keys and quotas: keep the password set.
 
 ## How it fits together (for maintainers)
 

@@ -69,7 +69,7 @@ Even with every call succeeding, a 7B model writes some statements whose numbers
 
 | Command | Expect |
 |---|---|
-| `make test` | `395 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
+| `make test` | `399 passed, 6 skipped`. Two skipped tests are the credential-gated smoke tests in §2; four are Postgres checks that run with `MARKETLENS_TEST_POSTGRES_URL` (§7) |
 | `make lint` | no errors (Python lint and formatting, web lint and typecheck) |
 | `make evaluate` | `49/49 cases passed` and every gate `ok`. A few `LLM_UNAVAILABLE` warnings are expected: some cases make the model fail on purpose. The report is written to `reports/evaluation/latest.md` |
 | `pnpm --dir apps/web build` | `✓ Compiled successfully` |

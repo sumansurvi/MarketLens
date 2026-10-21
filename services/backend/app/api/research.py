@@ -19,6 +19,14 @@ from app.container import AppContainer
 
 router = APIRouter(prefix="/api/research", tags=["research"])
 
+
+def _live_only(container: AppContainer) -> bool:
+    """In live mode the site never shows runs made from fixture (demo) data: D-104.
+
+    They stay in the database; they are only left out of what the site reads."""
+    return container.settings.data_mode == "live"
+
+
 ERRORS = {
     404: {"model": ErrorResponse},
     409: {"model": ErrorResponse},
@@ -50,7 +58,9 @@ async def list_research(
 
     normalized = normalize_symbol(symbol) if symbol else None
     container.run_manager.sweep_stale()
-    return RunListResponse(runs=container.runs.list_runs(limit=limit, symbol=normalized))
+    return RunListResponse(
+        runs=container.runs.list_runs(limit=limit, symbol=normalized, live_only=_live_only(container))
+    )
 
 
 # Declared before /{run_id} so "search" is not taken for a run ID.
@@ -61,7 +71,7 @@ async def search_research(
     container: AppContainer = Depends(get_container),
 ) -> RunSearchResponse:
     """Find past research by ticker, company name, question or the text of its kept findings."""
-    hits = container.runs.search_runs(q, limit=limit)
+    hits = container.runs.search_runs(q, limit=limit, live_only=_live_only(container))
     return RunSearchResponse(
         query=q,
         results=[RunSearchResult(run=h.run, matched=h.matched, snippet=h.snippet) for h in hits],
@@ -74,6 +84,11 @@ async def get_research(
     container: AppContainer = Depends(get_container),
 ) -> ResearchRunDetailResponse:
     container.run_manager.sweep_stale()
+    if _live_only(container):
+        stored = container.runs.get_run(run_id)
+        if stored is not None and stored.data_mode != "live":
+            # A demo run from before live data was configured is not shown in live mode (D-104).
+            raise MarketLensError(ErrorCode.NOT_FOUND, "Research run not found.")
     detail = container.workflow.get_run_detail(run_id)
     active = container.run_manager.is_active(run_id)
     return ResearchRunDetailResponse(

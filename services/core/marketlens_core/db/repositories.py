@@ -174,29 +174,36 @@ class RunRepository:
         with self.db.write() as conn:
             conn.execute(f"UPDATE research_runs SET {', '.join(sets)} WHERE run_id = ?", (*values, run_id))  # noqa: S608 - column names are allowlisted above
 
-    def list_runs(self, *, limit: int = 20, symbol: str | None = None) -> list[ResearchRun]:
+    def list_runs(self, *, limit: int = 20, symbol: str | None = None, live_only: bool = False) -> list[ResearchRun]:
+        """Newest first. ``live_only`` leaves out runs made from fixture (demo) data (D-104)."""
         query = "SELECT * FROM research_runs"
+        conditions: list[str] = []
         params: list[Any] = []
         if symbol:
-            query += " WHERE symbol = ?"
+            conditions.append("symbol = ?")
             params.append(symbol)
+        if live_only:
+            conditions.append("data_mode = 'live'")
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
         query += " ORDER BY created_at DESC LIMIT ?"
         params.append(max(1, min(limit, 100)))
         with self.db.read() as conn:
             rows = conn.execute(query, params).fetchall()
         return [self._run(r) for r in rows]
 
-    def search_runs(self, query: str, *, limit: int = 8) -> list[RunSearchHit]:
+    def search_runs(self, query: str, *, limit: int = 8, live_only: bool = False) -> list[RunSearchHit]:
         """Runs whose ticker, company name, question or kept findings contain every word of ``query``.
 
         Ranked by where the match is (exact ticker, ticker prefix, company name, question, findings),
         newest first within a rank. Statements set aside by the fact-checker are not searched. A
         finding snippet is returned for words the ticker, company and question don't contain.
+        ``live_only`` leaves out runs made from fixture (demo) data (D-104).
         """
         terms = _search_terms(query)
         if not terms:
             return []
-        conditions: list[str] = []
+        conditions: list[str] = ["r.data_mode = 'live'"] if live_only else []
         params: list[Any] = []
         like, company = self.db.like, self.db.json_text("r.company_json", "company_name")
         for term in terms:
