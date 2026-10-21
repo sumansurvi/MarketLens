@@ -114,6 +114,24 @@ async def cancel_research(
     return updated
 
 
+@router.post("/{run_id}/execute", response_model=ResearchRun, responses=ERRORS)
+async def execute_research(
+    run_id: str = Depends(valid_run_id),
+    container: AppContainer = Depends(get_container),
+) -> ResearchRun:
+    """Run a queued run inside this request (RUN_EXECUTION=request, D-103).
+
+    The page calls this right after starting a run, and polls the run while the call is open. The
+    answer is the run as it stands when execution ends. In the other modes the run is already
+    executing elsewhere, so this only returns its current state."""
+    if container.runs.get_run(run_id) is None:
+        raise MarketLensError(ErrorCode.NOT_FOUND, "Research run not found.")
+    await container.run_manager.execute(run_id)
+    updated = container.runs.get_run(run_id)
+    assert updated is not None
+    return updated
+
+
 @router.post(
     "/{run_id}/rerun", status_code=status.HTTP_202_ACCEPTED, response_model=CreateResearchResponse, responses=ERRORS
 )

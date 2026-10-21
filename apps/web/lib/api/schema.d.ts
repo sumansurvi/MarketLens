@@ -275,6 +275,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/research/{run_id}/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Research
+         * @description Run a queued run inside this request (RUN_EXECUTION=request, D-103).
+         *
+         *     The page calls this right after starting a run, and polls the run while the call is open. The
+         *     answer is the run as it stands when execution ends. In the other modes the run is already
+         *     executing elsewhere, so this only returns its current state.
+         */
+        post: operations["execute_research_api_research__run_id__execute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/research/{run_id}/rerun": {
         parameters: {
             query?: never;
@@ -2443,6 +2467,64 @@ export interface operations {
         };
     };
     cancel_research_api_research__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResearchRun"];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Conflict */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Unprocessable Content */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Service Unavailable */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    execute_research_api_research__run_id__execute_post: {
         parameters: {
             query?: never;
             header?: never;

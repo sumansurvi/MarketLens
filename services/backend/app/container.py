@@ -15,7 +15,7 @@ from app.mcp.gateway import ToolGateway
 from app.providers.llm.base import LLMProvider
 from app.providers.llm.factory import build_llm_provider
 from app.services.research_workflow import ResearchWorkflowService
-from app.services.run_manager import QueueRunManager, RunManager
+from app.services.run_manager import QueueRunManager, RequestRunManager, RunManager
 from app.services.voice import VoiceService
 from app.services.workspace import WorkspaceService
 
@@ -31,7 +31,7 @@ class AppContainer:
     llm: LLMProvider
     workflow: ResearchWorkflowService
     workspace: WorkspaceService
-    run_manager: RunManager | QueueRunManager
+    run_manager: RunManager | QueueRunManager | RequestRunManager
     voice: VoiceService
     analytics: AnalyticsRepository
 
@@ -46,9 +46,13 @@ def build_container(
     provider = llm or build_llm_provider(settings)
     analytics = AnalyticsRepository(db)
     workflow = ResearchWorkflowService(settings, runs, tool_gateway, provider, analytics)
-    run_manager: RunManager | QueueRunManager = (
-        QueueRunManager(settings, runs) if settings.run_execution == "queue" else RunManager(workflow)
-    )
+    run_manager: RunManager | QueueRunManager | RequestRunManager
+    if settings.run_execution == "queue":
+        run_manager = QueueRunManager(settings, runs)
+    elif settings.run_execution == "request":
+        run_manager = RequestRunManager(settings, runs, workflow)
+    else:
+        run_manager = RunManager(workflow)
     return AppContainer(
         settings=settings,
         db=db,

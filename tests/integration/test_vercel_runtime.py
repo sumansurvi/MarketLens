@@ -53,7 +53,7 @@ def test_vercel_profile_wins_over_variables_copied_from_env_example(monkeypatch)
     monkeypatch.setenv("MCP_LOG_DIR", "")
     monkeypatch.setenv("DATABASE_URL", POSTGRES)
     settings = load_settings()
-    assert (settings.app_env, settings.run_execution, settings.mcp_log_dir) == ("production", "queue", "-")
+    assert (settings.app_env, settings.run_execution, settings.mcp_log_dir) == ("production", "request", "-")
     assert mcp_log_directory(settings) is None and settings.session_cookie_secure
     warnings = settings.deployment_warnings()
     assert any(w.startswith("APP_ENV=development is set in the project's environment variables") for w in warnings)

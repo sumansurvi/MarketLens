@@ -27,13 +27,11 @@ dev = [
 [tool.uv]
 package = false
 
-# Vercel (D-98): the backend service (root ".") loads this FastAPI app, and Vercel Queues invokes
-# the research-run subscriber as a private function. See vercel.json and docs/DEPLOY_VERCEL.md.
+# Vercel (D-98): the backend service (root ".") loads this FastAPI app. Research runs are executed by the
+# page's execute request (RUN_EXECUTION=request, D-103), so no queue subscriber is deployed. See
+# vercel.json and docs/DEPLOY_VERCEL.md.
 [tool.vercel]
 entrypoint = "vercel_backend.asgi:app"
-
-[[tool.vercel.subscribers]]
-entrypoint = "vercel_backend.queue_consumer"
 
 [tool.uv.workspace]
 members = ["services/*"]

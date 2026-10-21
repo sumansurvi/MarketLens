@@ -5012,6 +5012,79 @@
         ]
       }
     },
+    "/api/research/{run_id}/execute": {
+      "post": {
+        "description": "Run a queued run inside this request (RUN_EXECUTION=request, D-103).\n\nThe page calls this right after starting a run, and polls the run while the call is open. The\nanswer is the run as it stands when execution ends. In the other modes the run is already\nexecuting elsewhere, so this only returns its current state.",
+        "operationId": "execute_research_api_research__run_id__execute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResearchRun"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Execute Research",
+        "tags": [
+          "research"
+        ]
+      }
+    },
     "/api/research/{run_id}/rerun": {
       "post": {
         "description": "Run the same research again as a new run; the original run and any saved brief are unchanged.\n\nSame symbol, question and focus areas. A default window stays the default (resolved against\nthe current reference date); an explicit window is reused exactly.",

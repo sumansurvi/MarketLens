@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-import { api, ApiError } from "@/lib/api/client";
+import { api, ApiError, executeRun } from "@/lib/api/client";
 import type { CreateResearchResponse, ResearchBrief, RunDetail } from "@/lib/api/types";
 import { usePolling } from "@/lib/use-api";
 
@@ -20,6 +20,11 @@ import { useEvidenceInspector } from "./use-inspector";
 const TERMINAL = new Set(["completed", "partial", "failed", "cancelled"]);
 const EMPTY: RunDetail["evidence"] = [];
 const EMPTY_CLAIMS: ResearchBrief["claims"] = [];
+/**
+ * Runs this page has started (D-103). A queued run is executed by the request that the page makes
+ * for it; the set stops a second view of the same run from starting it again.
+ */
+const startedRuns = new Set<string>();
 
 export function RunView({ runId }: { runId: string }) {
   const ws = useWorkspace();
@@ -29,7 +34,7 @@ export function RunView({ runId }: { runId: string }) {
   const [busy, setBusy] = useState(false);
   const [dialog, setDialog] = useState<"compare" | "details" | null>(null);
   const inspector = useEvidenceInspector(data?.evidence ?? EMPTY, data?.brief?.claims ?? EMPTY_CLAIMS);
-  const { setInspectorOpen, setCurrentSymbol } = ws;
+  const { setInspectorOpen, setCurrentSymbol, refresh } = ws;
   useEffect(() => {
     setInspectorOpen(inspector.open);
     return () => setInspectorOpen(false);
@@ -39,6 +44,16 @@ export function RunView({ runId }: { runId: string }) {
   useEffect(() => {
     if (runSymbol) setCurrentSymbol(runSymbol);
   }, [runSymbol, setCurrentSymbol]);
+  // A run that is still queued has not started anywhere (D-103): this page starts it. The request
+  // lasts as long as the research, and the polling above follows the run's progress meanwhile.
+  const queuedRunId = data?.run.status === "queued" ? data.run.run_id : null;
+  useEffect(() => {
+    if (!queuedRunId || startedRuns.has(queuedRunId)) return;
+    startedRuns.add(queuedRunId);
+    executeRun(queuedRunId)
+      .catch(() => startedRuns.delete(queuedRunId)) // a later view of this run may try again
+      .finally(refresh);
+  }, [queuedRunId, refresh]);
 
   if (loading && !data) {
     return (

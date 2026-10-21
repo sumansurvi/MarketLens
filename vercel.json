@@ -16,6 +16,7 @@
       "entrypoint": "vercel_backend.asgi:app",
       "functions": {
         "vercel_backend/asgi.py": {
+          "maxDuration": 300,
           "excludeFiles": "{apps/**,docs/**,tests/**,reports/**,data/runtime/**,data/*.db*,services/voice_agent/**,*.zip}"
         }
       }
