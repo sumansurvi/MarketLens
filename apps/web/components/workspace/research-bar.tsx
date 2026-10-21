@@ -14,6 +14,8 @@ type HorizonChoice = "default" | "1m" | "6m" | "1y" | "custom";
 
 /** Used when the question box is left empty, so a ticker alone is enough to start. */
 const DEFAULT_QUESTION = "Review recent price movement, company fundamentals, news context and key risks.";
+/** Starting a run can wait for a cold backend and the queue (D-102); past this the page says so. */
+const START_TIMEOUT_MS = 45_000;
 
 /**
  * The research bar is docked at the bottom of the workspace, like a chat composer, on one line:
@@ -84,7 +86,11 @@ export function ResearchBar({ voiceButton, voiceActive = false }: { voiceButton?
     if (horizon === "custom") body.time_horizon = { start_date: start || null, end_date: end || null };
     else if (horizon !== "default") body.time_horizon = { preset: horizon };
     try {
-      const created = await api<CreateResearchResponse>("/api/research", { method: "POST", json: body });
+      const created = await api<CreateResearchResponse>("/api/research", {
+        method: "POST",
+        json: body,
+        timeoutMs: START_TIMEOUT_MS,
+      });
       ws.refresh();
       ws.openRun(created.run.run_id);
     } catch (err) {

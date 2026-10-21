@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from typing import Any, Literal
 
 from marketlens_core.db.connection import AnyDatabase
+from marketlens_core.errors import ErrorCode
 from marketlens_core.models import (
     AgentStep,
     CompanyIdentity,
@@ -263,9 +264,11 @@ class RunRepository:
             )
             return cursor.rowcount == 1
 
-    def fail_run(self, run_id: str, message: str, code: str = "INTERNAL_ERROR") -> None:
+    def fail_run(
+        self, run_id: str, message: str, code: ErrorCode | str = ErrorCode.INTERNAL_ERROR, *, retryable: bool = False
+    ) -> None:
         """Mark one unfinished run failed with a reason (queue mode: not queued, or interrupted)."""
-        error = RunError(code=code, message=message)
+        error = RunError(code=code, message=message, retryable=retryable)
         now = iso_z(utc_now())
         with self.db.write() as conn:
             conn.execute(
@@ -279,19 +282,30 @@ class RunRepository:
 
         A queue-triggered function stops at its maximum duration, so a run whose function was
         cut off would otherwise stay "running" forever. Measured from when it started (or was
-        created, if it never started)."""
-        error = RunError(
-            code="INTERNAL_ERROR",
-            message="The research run didn't finish in time and was stopped. Try again.",
-        )
+        created, if it never started). A run that never started gets its own reason (D-102)."""
         now = iso_z(utc_now())
+        stopped = 0
         with self.db.write() as conn:
-            cursor = conn.execute(
-                "UPDATE research_runs SET status = 'failed', stage = 'done', updated_at = ?, completed_at = ?, "
-                "errors_json = ? WHERE status IN ('queued','running') AND COALESCE(started_at, created_at) < ?",
-                (now, now, _json([error.model_dump(mode="json")]), iso_z(cutoff)),
-            )
-            return cursor.rowcount
+            for status, code, message in (
+                (
+                    "queued",
+                    ErrorCode.RESEARCH_NOT_STARTED,
+                    "The research service didn't start this run in time. Try again.",
+                ),
+                (
+                    "running",
+                    ErrorCode.RESEARCH_TIMED_OUT,
+                    "The research run didn't finish in time and was stopped. Try again.",
+                ),
+            ):
+                error = RunError(code=code, message=message, retryable=True)
+                cursor = conn.execute(
+                    "UPDATE research_runs SET status = 'failed', stage = 'done', updated_at = ?, completed_at = ?, "
+                    "errors_json = ? WHERE status = ? AND COALESCE(started_at, created_at) < ?",
+                    (now, now, _json([error.model_dump(mode="json")]), status, iso_z(cutoff)),
+                )
+                stopped += cursor.rowcount
+        return stopped
 
     def mark_interrupted(self) -> int:
         """Runs left active by a previous process cannot resume; mark them failed."""
