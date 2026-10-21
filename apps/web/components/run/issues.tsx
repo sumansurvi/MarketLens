@@ -113,6 +113,16 @@ function describe(code: string, errors: RunError[], context: Context): Omit<Issu
       };
     }
     case "LLM_UNAVAILABLE":
+      // Live runs stop at a failed model step (D-104): the reason is the provider's own.
+      if (context.failed) {
+        return {
+          tone: "warning",
+          icon: "🤖",
+          title: "The AI model couldn't finish, so no brief was written",
+          body: naturalize(messages),
+          tip: "Press Re-run to try again. The reason comes from the model provider.",
+        };
+      }
       return {
         tone: "warning",
         icon: "🤖",

@@ -241,6 +241,22 @@ def test_findings_beyond_the_limit_are_discarded_with_a_code_written_note(tmp_pa
     assert "you should buy" not in json.dumps(detail).lower()
 
 
+def test_live_data_never_falls_back_to_a_summary_and_says_why(tmp_path, monkeypatch) -> None:
+    """Real data only (D-104): a model step that can't complete ends the run with the provider's reason.
+
+    The workflow switches to its live rules; the tools still read the offline fixtures here, so the
+    test needs no provider access."""
+    monkeypatch.setattr(Settings, "is_fixture_data", property(lambda self: False))
+    with research_client(tmp_path, llm=FixtureLLMProvider(failing_tasks={"news_specialist"})) as client:
+        detail = research(client)
+    assert detail["run"]["status"] == "failed"
+    message = detail["run"]["errors"][0]["message"]
+    assert "news events specialist" in message or "news_events" in message or "news" in message
+    assert "couldn't complete" in message
+    assert all(c["produced_by"] != "deterministic_fallback" for c in (detail["brief"] or {}).get("claims", []))
+    assert step(detail, "news_specialist")["status"] == "failed"
+
+
 def test_model_written_unknowns_and_notes_are_sanitized(tmp_path) -> None:
     def unknowns(out: Any) -> None:
         out.unknowns = [
