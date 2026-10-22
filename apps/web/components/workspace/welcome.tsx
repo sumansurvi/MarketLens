@@ -29,13 +29,6 @@ export function Welcome() {
             MarketLens gathers the evidence, has specialist agents analyze it, and shows you what it found, what it couldn&apos;t find, and where
             every number came from.
           </p>
-          {health?.warnings?.map((warning) => (
-            <div key={warning} className="mt-4">
-              <Notice tone="warning" title="Exposure warning">
-                {warning}
-              </Notice>
-            </div>
-          ))}
           {demo && (
             <div className="mt-5">
               <Notice title="Demo mode">

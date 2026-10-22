@@ -115,12 +115,16 @@ function describe(code: string, errors: RunError[], context: Context): Omit<Issu
     case "LLM_UNAVAILABLE":
       // Live runs stop at a failed model step (D-104): the reason is the provider's own.
       if (context.failed) {
+        // A key, credit or model problem is fixed in the site's settings, not by trying again (D-107).
+        const transient = errors.some((e) => e.retryable);
         return {
           tone: "warning",
           icon: "🤖",
           title: "The AI model couldn't finish, so no brief was written",
           body: naturalize(messages),
-          tip: "Press Re-run to try again. The reason comes from the model provider.",
+          tip: transient
+            ? "Press Re-run to try again in a moment."
+            : "This needs a change to the site's AI settings. Re-run will work once that's done.",
         };
       }
       return {
@@ -263,7 +267,7 @@ export function HeadsUp({
             </span>
             <div className="min-w-0 space-y-1">
               <p className="font-medium leading-snug text-ink">{issue.title}</p>
-              <p className="text-sm leading-relaxed text-ink-2">{issue.body}</p>
+              <p className="text-sm leading-relaxed text-ink-2 [overflow-wrap:anywhere]">{issue.body}</p>
               {issue.categories.length > 0 && (
                 <p className="flex flex-wrap gap-1 pt-0.5">
                   {issue.categories.map((c) => (

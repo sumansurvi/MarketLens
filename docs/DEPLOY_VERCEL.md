@@ -69,7 +69,7 @@ Environment variables belong to the whole project, so both services can read the
 ## 4. Check that it works
 
 1. Open your address. The browser asks for the password if you set one. MarketLens loads with the green **LIVE DATA** label. A **DEMO FIXTURES** label on the hosted site means the real-data settings below are missing (the site would refuse to start in demo mode).
-2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set.
+2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set. These warnings are for you as the operator. They are in `/api/health` and the `backend` logs, and the site's pages don't show them (D-106).
 3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes with real market data (this can take a few minutes with a hosted model).
 4. Press the search icon and search for `apple`: the run appears.
 5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run … executed in its request: completed`.
@@ -121,7 +121,7 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes, or the function's 300 s limit). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
 | Older runs show "didn't pick the run up" or "couldn't be started" | Runs from the queue setup (D-102) and before D-103. Press Re-run. |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
-| A run says "The AI model couldn't finish, so no brief was written" | The page shows the provider's reason. "does not exist": fix `OPENAI_MODEL`. "no credit left": add billing at platform.openai.com. "rejected the API key": fix `OPENAI_API_KEY`. "could not be reached": remove `OPENAI_BASE_URL` on Vercel. Then press Re-run. |
+| A run says "The AI model couldn't finish, so no brief was written" | The page gives the cause in one sentence, and the `backend` logs (`language model call failed`) have OpenAI's own message. "didn't accept the site's API key": paste a valid key into `OPENAI_API_KEY`. "run out of credit": add billing at platform.openai.com. "model … isn't available": fix `OPENAI_MODEL`. "couldn't be reached": remove `OPENAI_BASE_URL`. Then redeploy and press Re-run. |
 | Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
 ## What is protected, and what isn't
