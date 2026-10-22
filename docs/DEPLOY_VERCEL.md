@@ -69,7 +69,7 @@ Environment variables belong to the whole project, so both services can read the
 ## 4. Check that it works
 
 1. Open your address. The browser asks for the password if you set one. MarketLens loads with the green **LIVE DATA** label. A **DEMO FIXTURES** label on the hosted site means the real-data settings below are missing (the site would refuse to start in demo mode).
-2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set.
+2. Open `/api/health`. Expect `"app_env": "production"`, all three `mcp_servers` with `"ready": true`, and no `warnings` except the password note when `SITE_PASSWORD` isn't set. These warnings are for you as the operator. They are in `/api/health` and the `backend` logs, and the site's pages don't show them (D-106).
 3. Run a research, for example AAPL. It shows **Queued**, then the progress steps, and completes with real market data (this can take a few minutes with a hosted model).
 4. Press the search icon and search for `apple`: the run appears.
 5. Optional: in **Logs**, choose the `backend` service. You should see `MCP servers ready: 3 of 3 in … s` and, for each research, `research run … executed in its request: completed`.
