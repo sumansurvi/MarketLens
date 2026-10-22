@@ -259,7 +259,7 @@ class ResearchWorkflowService:
                 f"The run exceeded its {int(self.settings.run_timeout_seconds)}-second limit and was stopped.",
             )
         except MarketLensError as exc:
-            self._fail(run_id, steps, started, exc.code, exc.message)
+            self._fail(run_id, steps, started, exc.code, exc.message, retryable=exc.retryable)
         except Exception:  # noqa: BLE001 - background task boundary
             logger.exception("research run %s failed unexpectedly", run_id)
             self._fail(run_id, steps, started, ErrorCode.INTERNAL_ERROR, "The research run failed unexpectedly.")
@@ -555,9 +555,9 @@ class ResearchWorkflowService:
         """Live data (D-104): a model step that can't complete ends the run; nothing is summarized in its place.
 
         The step is recorded as failed with the provider's reason, and the run fails with it."""
-        message = f"The {what} model step couldn't complete. {exc.message}"
-        steps.finish(step, StepStatus.FAILED, message, error_code=exc.code)  # type: ignore[arg-type]
-        return MarketLensError(exc.code, message, retryable=exc.retryable, details=exc.details)
+        steps.finish(step, StepStatus.FAILED, f"The {what} step stopped: {exc.message}", error_code=exc.code)  # type: ignore[arg-type]
+        # The run's reason is the plain sentence alone; provider details stay in the logs (D-107).
+        return MarketLensError(exc.code, exc.message, retryable=exc.retryable, details=exc.details)
 
     async def _run_specialist(
         self,
@@ -597,7 +597,16 @@ class ResearchWorkflowService:
             )
             return SpecialistRun(spec, output, fallback=False, truncated=truncated)
 
-    def _fail(self, run_id: str, steps: StepRecorder, started: float, code: ErrorCode, message: str) -> None:
+    def _fail(
+        self,
+        run_id: str,
+        steps: StepRecorder,
+        started: float,
+        code: ErrorCode,
+        message: str,
+        *,
+        retryable: bool | None = None,
+    ) -> None:
         step = steps.start("failure", "research_supervisor", message)
         steps.finish(step, StepStatus.FAILED, message, error_code=code)
         current = self.runs.get_run(run_id)
@@ -606,7 +615,9 @@ class ResearchWorkflowService:
             RunError(
                 code=code,
                 message=message,
-                retryable=code in (ErrorCode.PROVIDER_TIMEOUT, ErrorCode.MCP_SERVER_UNAVAILABLE),
+                retryable=retryable
+                if retryable is not None
+                else code in (ErrorCode.PROVIDER_TIMEOUT, ErrorCode.MCP_SERVER_UNAVAILABLE),
             )
         )
         self.runs.update_run(

@@ -121,7 +121,7 @@ Push to the production branch and Vercel redeploys both services. Preview deploy
 | A run says "The run ran out of time" (`RESEARCH_TIMED_OUT`) | It started and was stopped at the time limit (`RUN_TIMEOUT_SECONDS` plus two minutes, or the function's 300 s limit). Keep `RUN_TIMEOUT_SECONDS` at 280 or less on Hobby. |
 | Older runs show "didn't pick the run up" or "couldn't be started" | Runs from the queue setup (D-102) and before D-103. Press Re-run. |
 | The first request after a quiet period takes several seconds | The backend instance was starting, which includes its three MCP servers. Later requests are fast. |
-| A run says "The AI model couldn't finish, so no brief was written" | The page shows the provider's reason. "does not exist": fix `OPENAI_MODEL`. "no credit left": add billing at platform.openai.com. "rejected the API key": fix `OPENAI_API_KEY`. "could not be reached": remove `OPENAI_BASE_URL` on Vercel. Then press Re-run. |
+| A run says "The AI model couldn't finish, so no brief was written" | The page gives the cause in one sentence, and the `backend` logs (`language model call failed`) have OpenAI's own message. "didn't accept the site's API key": paste a valid key into `OPENAI_API_KEY`. "run out of credit": add billing at platform.openai.com. "model … isn't available": fix `OPENAI_MODEL`. "couldn't be reached": remove `OPENAI_BASE_URL`. Then redeploy and press Re-run. |
 | Build error about pnpm or the install | The `web` service's install and build commands come from `vercel.json`. Turn off any **Override** toggles in the project settings. |
 
 ## What is protected, and what isn't

@@ -141,8 +141,8 @@ def test_agent_contracts_are_valid_strict_structured_output_schemas(model: type)
     assert '"default"' not in json.dumps(schema)
 
 
-async def test_a_missing_model_says_so_and_names_the_setting() -> None:
-    """The page must show why: a model the key can't use is named, with OPENAI_MODEL (D-104)."""
+async def test_a_missing_model_is_a_plain_sentence_with_the_detail_kept_for_the_operator() -> None:
+    """The page gets one plain sentence; what the provider said goes to the details and logs (D-107)."""
     body = {
         "error": {
             "message": "The model `qwen2.5:7b` does not exist or you do not have access to it.",
@@ -152,14 +152,13 @@ async def test_a_missing_model_says_so_and_names_the_setting() -> None:
     }
     with pytest.raises(MarketLensError) as err:
         await call(provider(lambda r: httpx2.Response(404, json=body)))
-    assert err.value.code == ErrorCode.LLM_UNAVAILABLE and err.value.retryable is False
-    assert "OPENAI_MODEL" in err.value.message and "does not exist" in err.value.message
+    assert err.value.message == "The AI model set up for this site isn't available."
+    assert err.value.retryable is False
     assert err.value.details["provider_status"] == 404
-    assert KEY not in err.value.message
+    assert "does not exist" in err.value.details["provider_message"]
 
 
 async def test_no_credit_is_not_reported_as_a_rate_limit() -> None:
-    """An account with no credit can't be helped by retrying, so the message says what to add (D-104)."""
     body = {
         "error": {
             "message": "You have no credits remaining.",
@@ -169,12 +168,21 @@ async def test_no_credit_is_not_reported_as_a_rate_limit() -> None:
     }
     with pytest.raises(MarketLensError) as err:
         await call(provider(lambda r: httpx2.Response(429, json=body)))
-    assert "no credit" in err.value.message and err.value.retryable is False
-    assert "rate-limited" not in err.value.message
+    assert err.value.message == "The AI service account has run out of credit." and err.value.retryable is False
 
 
-async def test_the_key_never_appears_in_what_the_provider_reports() -> None:
-    body = {"error": {"message": f"Incorrect key {KEY} provided.", "type": "invalid_request_error"}}
+async def test_a_rejected_key_never_shows_the_key_masked_or_not() -> None:
+    """OpenAI echoes a masked key in 401s ("sk-proj-****genK"); neither it nor the real key reaches anyone."""
+    masked = "sk-proj-" + "*" * 120 + "genK"
+    body = {
+        "error": {
+            "message": f"Incorrect API key provided: {masked}. You can find your API key at x.",
+            "type": "invalid_request_error",
+            "code": "invalid_api_key",
+        }
+    }
     with pytest.raises(MarketLensError) as err:
-        await call(provider(lambda r: httpx2.Response(400, json=body)))
-    assert KEY not in err.value.message and "***" in err.value.message
+        await call(provider(lambda r: httpx2.Response(401, json=body)))
+    assert err.value.message == "The AI service didn't accept the site's API key."
+    detail = err.value.details["provider_message"]
+    assert "sk-proj" not in detail and "****" not in detail and KEY not in detail and "[key]" in detail
